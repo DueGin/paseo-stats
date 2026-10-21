@@ -1,0 +1,7 @@
+{
+  "id": "paseo-stats",
+  "name": "Usage stats",
+  "requirements": {
+    "paseo": ">=0.12.0"
+  }
+}

@@ -1,0 +1,54 @@
+{
+  "name": "paseo-stats",
+  "version": "0.1.0",
+  "description": "Token usage and USD cost statistics for Paseo agents by provider, model and project, with multi-agent collaboration insights",
+  "type": "module",
+  "license": "MIT",
+  "author": "DueGin",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DueGin/paseo-stats.git"
+  },
+  "bugs": {
+    "url": "https://github.com/DueGin/paseo-stats/issues"
+  },
+  "homepage": "https://github.com/DueGin/paseo-stats#readme",
+  "keywords": [
+    "paseo",
+    "paseo-plugin",
+    "usage",
+    "tokens",
+    "cost",
+    "statistics"
+  ],
+  "files": [
+    "paseo-plugin.json",
+    "OVERVIEW.md",
+    "index.client.tsx",
+    "index.server.ts",
+    "client/",
+    "server/",
+    "shared/"
+  ],
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --no-warnings --test \"test/*.test.mjs\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:version": "node scripts/check-version.mjs",
+    "check": "npm run typecheck && npm test && npm run format:check && npm run check:version",
+    "version": "node scripts/sync-version.mjs && prettier --write shared/version.ts && git add shared/version.ts"
+  },
+  "devDependencies": {
+    "@getpaseo/plugin": "0.12.0",
+    "@tanstack/react-query": "^5.90.11",
+    "@types/node": "^22.20.5",
+    "@types/react": "~19.2.0",
+    "prettier": "^3.9.10",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "typescript": "^5.9.3",
+    "zod": "^4.4.3"
+  }
+}
