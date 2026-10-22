@@ -33,6 +33,8 @@ export type Option = z.infer<typeof OptionSchema>;
 
 export const TreeMemberSchema = z.object({
   agentId: z.string(),
+  // The member that launched this one; null for the root.
+  parentId: z.string().nullable(),
   title: z.string(),
   provider: z.string(),
   model: z.string().nullable(),
@@ -86,6 +88,32 @@ export const ModelRoleSchema = z.object({
 });
 export type ModelRole = z.infer<typeof ModelRoleSchema>;
 
+// Agents in collaboration trees grouped by depth and by main model (or
+// provider). Native nodes stand for provider subagents run by the agents of
+// the node one level up; their count is sessions rather than agents.
+export const TopologyNodeSchema = SpendSchema.extend({
+  id: z.string(),
+  key: z.string().nullable(),
+  depth: z.number(),
+  native: z.boolean(),
+  count: z.number(),
+});
+export type TopologyNode = z.infer<typeof TopologyNodeSchema>;
+
+// Edge spend is the child side's whole spend, matching collaboration pairs.
+export const TopologyEdgeSchema = SpendSchema.extend({
+  from: z.string(),
+  to: z.string(),
+  count: z.number(),
+});
+export type TopologyEdge = z.infer<typeof TopologyEdgeSchema>;
+
+export const TopologySchema = z.object({
+  nodes: z.array(TopologyNodeSchema),
+  edges: z.array(TopologyEdgeSchema),
+});
+export type Topology = z.infer<typeof TopologySchema>;
+
 export const CollaborationSchema = z.object({
   activeAgents: z.number(),
   trees: z.number(),
@@ -102,6 +130,7 @@ export const CollaborationSchema = z.object({
   providerPairs: z.array(CollaborationPairSchema),
   modelPairs: z.array(CollaborationPairSchema),
   models: z.array(ModelRoleSchema),
+  topology: z.object({ model: TopologySchema, provider: TopologySchema }),
   topTrees: z.array(CollaborationTreeSchema),
 });
 export type Collaboration = z.infer<typeof CollaborationSchema>;

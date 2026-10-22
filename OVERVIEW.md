@@ -8,6 +8,7 @@ Usage stats shows how many tokens your Paseo agents used and what they cost in U
 - Searchable multi-select filters for providers, models and projects. Filters combine and apply to every number on the screen.
 - A multi-agent section with collaboration trees, child agents, average and maximum fan-out, depth, the share of cost spent in child agents, provider pairs such as Claude to Codex, and the most expensive collaborations with their member agents. Provider-native subagents, such as Codex subthreads and Claude Code subagents, are counted separately and attributed to the Paseo agent that spawned them.
 - Collaboration by model: each model's spend as an orchestrator, a child agent and a provider subagent, the share of its spend that happens in collaboration, what orchestrators mainly using it delegated (children, their spend and fan-out), and parent to child pairs by model or by provider. Tap a model to filter the screen by it.
+- Topology graphs: a layered graph of which agents launched which, grouped per level by model or by provider. Line thickness shows the number of children, dashed nodes are provider subagents, and tapping a node highlights and lists its links. Each collaboration in the ranking can also switch from a list to an agent-level topology, where tapping a node opens that agent.
 
 ## How it works
 

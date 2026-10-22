@@ -9,6 +9,9 @@ import {
   type StatsQuery,
   type StatsResult,
   type Totals,
+  type Topology,
+  type TopologyEdge,
+  type TopologyNode,
   type TreeMember,
 } from "../shared/stats.ts";
 import { eventCost, type PriceBook } from "./pricing.ts";
@@ -440,7 +443,117 @@ function collaborate(
     providerPairs: sortPairs(providerPairs),
     modelPairs: sortPairs(modelPairs),
     models: modelRoles(roles),
+    topology: {
+      model: buildTopology({
+        trees,
+        depth: (id) => lineage(id).length - 1,
+        parentOf,
+        activity,
+        keyOf: mainModel,
+        nativeKeyOf: (_id, model) => model,
+      }),
+      provider: buildTopology({
+        trees,
+        depth: (id) => lineage(id).length - 1,
+        parentOf,
+        activity,
+        keyOf: (id) => providerLabel(agents[id].provider),
+        nativeKeyOf: (id) => providerLabel(agents[id].provider),
+      }),
+    },
     topTrees: collaborative.slice(0, TOP_TREES),
+  };
+}
+
+interface TopologyInput {
+  trees: ReadonlyMap<string, ReadonlySet<string>>;
+  depth(id: string): number;
+  parentOf(id: string): string | null;
+  activity: ReadonlyMap<string, AgentActivity>;
+  keyOf(id: string): string | null;
+  nativeKeyOf(id: string, model: string): string | null;
+}
+
+export function buildTopology(input: TopologyInput): Topology {
+  const { trees, depth, parentOf, activity, keyOf, nativeKeyOf } = input;
+  const nodes = new Map<string, TopologyNode>();
+  const edges = new Map<string, TopologyEdge>();
+  const depths = new Map<string, number>();
+  const depthOf = (id: string) => {
+    let value = depths.get(id);
+    if (value === undefined) {
+      value = depth(id);
+      depths.set(id, value);
+    }
+    return value;
+  };
+  const node = (key: string | null, level: number, native: boolean) => {
+    const id = `${level}:${native ? "n" : "a"}:${key ?? ""}`;
+    let found = nodes.get(id);
+    if (!found) {
+      found = {
+        id,
+        key,
+        depth: level,
+        native,
+        count: 0,
+        tokens: 0,
+        costUsd: 0,
+      };
+      nodes.set(id, found);
+    }
+    return found;
+  };
+  const edge = (from: string, to: string, count: number, spend: Spend) => {
+    const key = `${from}\u0000${to}`;
+    let found = edges.get(key);
+    if (!found) {
+      found = { from, to, count: 0, tokens: 0, costUsd: 0 };
+      edges.set(key, found);
+    }
+    found.count += count;
+    addSpend(found, spend.tokens, spend.costUsd);
+  };
+
+  for (const members of trees.values()) {
+    if (members.size < 2) continue;
+    for (const id of members) {
+      const level = depthOf(id);
+      const self = node(keyOf(id), level, false);
+      const entry = activity.get(id);
+      self.count += 1;
+      for (const usage of entry?.models.values() ?? []) {
+        addSpend(self, usage.own.tokens, usage.own.costUsd);
+      }
+      const parent = parentOf(id);
+      if (parent && members.has(parent)) {
+        const from = node(keyOf(parent), depthOf(parent), false);
+        edge(from.id, self.id, 1, {
+          tokens: entry?.totals.total ?? 0,
+          costUsd: entry?.totals.costUsd ?? 0,
+        });
+      }
+      for (const [model, usage] of entry?.models ?? []) {
+        const sessions = usage.native.sessions.size;
+        if (sessions === 0) continue;
+        const sub = node(nativeKeyOf(id, model), level + 1, true);
+        sub.count += sessions;
+        addSpend(sub, usage.native.tokens, usage.native.costUsd);
+        edge(self.id, sub.id, sessions, usage.native);
+      }
+    }
+  }
+  return {
+    nodes: [...nodes.values()].sort(
+      (a, b) =>
+        a.depth - b.depth ||
+        Number(a.native) - Number(b.native) ||
+        b.costUsd - a.costUsd ||
+        b.count - a.count,
+    ),
+    edges: [...edges.values()].sort(
+      (a, b) => b.count - a.count || b.costUsd - a.costUsd,
+    ),
   };
 }
 
@@ -544,7 +657,7 @@ function describeTree(
 
   const ordered: TreeMember[] = [];
   const modelTokens = new Map<string, number>();
-  const visit = (id: string, depth: number) => {
+  const visit = (id: string, depth: number, parentId: string | null) => {
     const agent = agents[id];
     const entry = activity.get(id);
     for (const [model, usage] of entry?.models ?? []) {
@@ -555,6 +668,7 @@ function describeTree(
     }
     ordered.push({
       agentId: id,
+      parentId,
       title: agent.title?.trim() || id.slice(0, 8),
       provider: providerLabel(agent.provider),
       model: primaryModel(entry, configuredModel(agent)),
@@ -566,9 +680,9 @@ function describeTree(
     const kids = [...(children.get(id) ?? [])].sort(
       (a, b) => startOf(a) - startOf(b),
     );
-    for (const kid of kids) visit(kid, depth + 1);
+    for (const kid of kids) visit(kid, depth + 1, id);
   };
-  visit(root, 0);
+  visit(root, 0, null);
 
   const stamps = ordered.flatMap((member) => {
     const entry = activity.get(member.agentId);

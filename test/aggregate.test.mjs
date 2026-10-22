@@ -352,3 +352,55 @@ test("pairs fall back to the normalized configured model without usage", () => {
     ),
   );
 });
+
+test("model topology groups tree members by depth and main model", () => {
+  const { nodes, edges } = run().collaboration.topology.model;
+  assert.deepEqual(
+    nodes.map((n) => [n.id, n.count, n.tokens, money(n.costUsd)]),
+    [
+      ["0:a:claude-opus-5-5", 1, 110, 0.11],
+      ["1:a:gpt-6.1-sol", 1, 110, 0.11],
+      ["1:a:mystery", 1, 110, 0],
+      ["2:a:kimi-k3", 1, 110, 0.5],
+      ["2:n:gpt-6.1-sol", 1, 110, 0.11],
+    ],
+  );
+  assert.ok(nodes.find((n) => n.id === "2:n:gpt-6.1-sol").native);
+  assert.deepEqual(
+    edges
+      .map((e) => [`${e.from} > ${e.to}`, e.count, e.tokens, money(e.costUsd)])
+      .sort(),
+    [
+      ["0:a:claude-opus-5-5 > 1:a:gpt-6.1-sol", 1, 220, 0.22],
+      ["0:a:claude-opus-5-5 > 1:a:mystery", 1, 110, 0],
+      ["1:a:gpt-6.1-sol > 2:a:kimi-k3", 1, 110, 0.5],
+      ["1:a:gpt-6.1-sol > 2:n:gpt-6.1-sol", 1, 110, 0.11],
+    ],
+  );
+});
+
+test("provider topology uses provider labels and leaves solo agents out", () => {
+  const { nodes, edges } = run().collaboration.topology.provider;
+  assert.deepEqual(nodes.map((n) => n.id).sort(), [
+    "0:a:Claude",
+    "1:a:Codex",
+    "1:a:Pi",
+    "2:a:Pi",
+    "2:n:Codex",
+  ]);
+  assert.equal(edges.length, 4);
+  assert.equal(nodes.find((n) => n.id === "1:a:Codex").count, 1);
+});
+
+test("tree members record the member that launched them", () => {
+  const [tree] = run().collaboration.topTrees;
+  assert.deepEqual(
+    tree.members.map((m) => [m.agentId, m.parentId]),
+    [
+      ["root", null],
+      ["child1", "root"],
+      ["grand", "child1"],
+      ["child2", "root"],
+    ],
+  );
+});

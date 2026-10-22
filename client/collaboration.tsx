@@ -7,6 +7,8 @@ import type { Collaboration, CollaborationTree } from "../shared/stats";
 import { compact as short, percent, usd } from "./format";
 import type { Translate } from "./i18n";
 import { ModelRoles, PairList } from "./collaboration-models";
+import { CollaborationTopology } from "./collaboration-topology";
+import { TopologyGraph, type GraphNodeView } from "./topology-graph";
 import { StatTile, TABULAR, cardStyle, sectionTitleStyle } from "./ui";
 
 export interface CollaborationSectionProps {
@@ -109,6 +111,8 @@ export function CollaborationSection({
         />
       </View>
 
+      <CollaborationTopology topology={c.topology} theme={theme} t={t} />
+
       <ModelRoles
         models={c.models}
         onPick={onPickModel}
@@ -159,7 +163,40 @@ interface TreeRowProps {
   t: Translate;
 }
 
+type TreeView = "list" | "graph";
+
 function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
+  const [view, setView] = useState<TreeView>("list");
+  const graphNodes = useMemo<GraphNodeView[]>(() => {
+    if (view !== "graph") return [];
+    const maxCost = Math.max(0, ...tree.members.map((m) => m.costUsd));
+    return tree.members.map((member) => ({
+      id: member.agentId,
+      column: member.depth,
+      parentId: member.parentId,
+      title: member.title,
+      subtitle: [
+        member.model ?? member.provider,
+        usd(member.costUsd),
+        member.nativeSessions > 0
+          ? t("collab.memberNative", { count: member.nativeSessions })
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      magnitude: maxCost > 0 ? member.costUsd / maxCost : 0,
+      accessibilityLabel: t("collab.openAgent", { title: member.title }),
+    }));
+  }, [tree.members, view, t]);
+  const graphEdges = useMemo(
+    () =>
+      tree.members.flatMap((member) =>
+        member.parentId
+          ? [{ from: member.parentId, to: member.agentId, weight: 1 }]
+          : [],
+      ),
+    [tree.members],
+  );
   const styles = useMemo(
     () => ({
       box: {
@@ -189,6 +226,21 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
         borderTopColor: theme.colors.border,
         paddingVertical: 4,
       },
+      views: {
+        flexDirection: "row" as const,
+        gap: 4,
+        paddingHorizontal: 10,
+        paddingTop: 6,
+        paddingBottom: 2,
+      },
+      viewTab: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+      viewTabActive: { backgroundColor: theme.colors.surface2 },
+      viewText: { color: theme.colors.foregroundMuted, fontSize: 12 },
+      viewTextActive: {
+        color: theme.colors.foreground,
+        fontWeight: "600" as const,
+      },
+      graph: { paddingHorizontal: 10, paddingVertical: 8, gap: 6 },
       member: {
         flexDirection: "row" as const,
         alignItems: "center" as const,
@@ -245,6 +297,53 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
         </View>
       </Pressable>
       {open ? (
+        <View style={styles.views}>
+          {(["list", "graph"] as const).map((id) => {
+            const active = id === view;
+            return (
+              <Pressable
+                key={id}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                onPress={() => setView(id)}
+                style={[styles.viewTab, active ? styles.viewTabActive : null]}
+              >
+                <Text
+                  style={[
+                    styles.viewText,
+                    active ? styles.viewTextActive : null,
+                  ]}
+                >
+                  {t(`collab.view.${id}`)}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+      {open && view === "graph" ? (
+        <View style={styles.graph}>
+          {navigation ? (
+            <Text style={styles.meta}>{t("collab.openHint")}</Text>
+          ) : null}
+          <TopologyGraph
+            nodes={graphNodes}
+            edges={graphEdges}
+            mode="tree"
+            columnTitle={(column) => t("collab.layer", { depth: column })}
+            onPressNode={
+              navigation
+                ? (agentId) => navigation.openAgent({ agentId })
+                : undefined
+            }
+            nodeWidth={220}
+            nodeHeight={44}
+            columnGap={48}
+            theme={theme}
+          />
+        </View>
+      ) : null}
+      {open && view === "list" ? (
         <View style={styles.members}>
           {tree.members.map((member) => {
             const details = [

@@ -11,6 +11,7 @@ A [Paseo](https://paseo.sh) plugin that reports token usage and USD cost of your
 - **Filters**: searchable multi-select dropdowns for providers, models and projects that scope the whole screen.
 - **Multi-agent collaboration**: collaborations, child agents, average and maximum fan-out, depth, child agent cost share, provider pairs such as Claude to Codex, and the top collaborations with their members. Provider-native subagents (Codex threads, Claude subagents) are counted separately.
 - **Collaboration by model**: each model's spend as orchestrator, child agent and provider subagent, its collaborative share, what orchestrators on that model delegated (children, spend, fan-out), and parent → child pairs by model or provider, such as `claude-opus-5-5 → gpt-6.1-sol ×93`. Tap a model to filter the page by it.
+- **Topology graphs**: a layered graph of how agents launch each other, grouped by model or provider per level, with line thickness for the number of children and dashed nodes for provider subagents; tap a node to highlight and list its links. Each collaboration in the ranking also has an agent-level topology view; tap a node to open that agent.
 - **Hot updates**: new GitHub releases show up in the app with a one-click update, or update automatically. Paseo keeps running.
 
 ## Data sources
