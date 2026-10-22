@@ -1,6 +1,6 @@
 {
   "name": "paseo-stats",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Token usage and USD cost statistics for Paseo agents by provider, model and project, with multi-agent collaboration insights",
   "type": "module",
   "license": "MIT",
