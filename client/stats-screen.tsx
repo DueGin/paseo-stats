@@ -449,6 +449,7 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
             <CollaborationSection
               collaboration={data.collaboration}
               totalCostUsd={data.totals.costUsd}
+              onPickModel={(model) => pick("model", model)}
               navigation={navigation}
               theme={theme}
               compact={compact}

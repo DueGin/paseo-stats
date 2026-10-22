@@ -10,6 +10,7 @@ A [Paseo](https://paseo.sh) plugin that reports token usage and USD cost of your
 - **Time ranges**: last 24 hours (default), 7, 30 or 90 days, all time, or a custom range.
 - **Filters**: searchable multi-select dropdowns for providers, models and projects that scope the whole screen.
 - **Multi-agent collaboration**: collaborations, child agents, average and maximum fan-out, depth, child agent cost share, provider pairs such as Claude to Codex, and the top collaborations with their members. Provider-native subagents (Codex threads, Claude subagents) are counted separately.
+- **Collaboration by model**: each model's spend as orchestrator, child agent and provider subagent, its collaborative share, what orchestrators on that model delegated (children, spend, fan-out), and parent → child pairs by model or provider, such as `claude-opus-5-5 → gpt-6.1-sol ×93`. Tap a model to filter the page by it.
 - **Hot updates**: new GitHub releases show up in the app with a one-click update, or update automatically. Paseo keeps running.
 
 ## Data sources

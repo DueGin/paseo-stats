@@ -1,8 +1,10 @@
 import {
   NO_PROJECT_KEY,
   type Collaboration,
+  type CollaborationPair,
   type CollaborationTree,
   type GroupRow,
+  type ModelRole,
   type Option,
   type StatsQuery,
   type StatsResult,
@@ -124,12 +126,58 @@ export function projectKeyOf(agent: AgentMeta): string {
   return agent.projectKey ?? NO_PROJECT_KEY;
 }
 
+interface Spend {
+  tokens: number;
+  costUsd: number;
+}
+
+// An agent's spend on one model: its own requests, and those of the provider
+// subagents (Codex threads, Claude subagents) it ran.
+interface ModelUsage {
+  own: Spend;
+  native: Spend & { sessions: Set<string> };
+}
+
 interface AgentActivity {
   totals: Totals;
-  models: Map<string, number>;
+  models: Map<string, ModelUsage>;
   nativeSessions: Set<string>;
   first: number;
   last: number;
+}
+
+function addSpend(target: Spend, tokens: number, costUsd: number) {
+  target.tokens += tokens;
+  target.costUsd += costUsd;
+}
+
+// Pi-style providers configure "<provider>/<model>", but their logs name the
+// bare model; strip the prefix so fallbacks and filters line up with usage.
+export function configuredModel(agent: AgentMeta): string | null {
+  const { provider, model } = agent;
+  if (!model || (provider !== "pi" && provider !== "omp")) return model;
+  const slash = model.indexOf("/");
+  return slash === -1 ? model : model.slice(slash + 1);
+}
+
+// The model doing most of the agent's own work in range, else its configured one.
+export function primaryModel(
+  entry: AgentActivity | undefined,
+  fallback: string | null,
+): string | null {
+  let best: [string, ModelUsage] | null = null;
+  for (const candidate of entry?.models ?? []) {
+    const [, usage] = candidate;
+    if (
+      !best ||
+      usage.own.tokens > best[1].own.tokens ||
+      (usage.own.tokens === best[1].own.tokens &&
+        usage.native.tokens > best[1].native.tokens)
+    ) {
+      best = candidate;
+    }
+  }
+  return best?.[0] ?? fallback;
 }
 
 export function aggregate(input: AggregateInput): AggregateOutput {
@@ -222,10 +270,16 @@ export function aggregate(input: AggregateInput): AggregateOutput {
       activity.set(agent.id, entry);
     }
     addEvent(entry.totals, event, cost);
-    entry.models.set(
-      event.model,
-      (entry.models.get(event.model) ?? 0) + tokens,
-    );
+    let usage = entry.models.get(event.model);
+    if (!usage) {
+      usage = {
+        own: { tokens: 0, costUsd: 0 },
+        native: { tokens: 0, costUsd: 0, sessions: new Set() },
+      };
+      entry.models.set(event.model, usage);
+    }
+    addSpend(event.native ? usage.native : usage.own, tokens, cost ?? 0);
+    if (event.native) usage.native.sessions.add(event.session);
     entry.first = Math.min(entry.first, event.ts);
     entry.last = Math.max(entry.last, event.ts);
     if (event.native) {
@@ -241,7 +295,8 @@ export function aggregate(input: AggregateInput): AggregateOutput {
     if (participants.has(agent.id) || agent.createdAt === null) continue;
     if (agent.createdAt < query.from || agent.createdAt > query.to) continue;
     if (!agentPasses(agent)) continue;
-    if (modelFilter && !(agent.model && modelFilter.has(agent.model))) continue;
+    const model = configuredModel(agent);
+    if (modelFilter && !(model && modelFilter.has(model))) continue;
     participants.add(agent.id);
   }
 
@@ -300,11 +355,12 @@ function collaborate(
     trees.set(root, members);
   }
 
+  const mainModel = (id: string) =>
+    primaryModel(activity.get(id), configuredModel(agents[id]));
   const fanout = new Map<string, number>();
-  const pairs = new Map<
-    string,
-    { parent: string; child: string; count: number }
-  >();
+  const providerPairs = new Map<string, CollaborationPair>();
+  const modelPairs = new Map<string, CollaborationPair>();
+  const roles = new Map<string, RoleTally>();
   let childAgents = 0;
   let childTokens = 0;
   let childCostUsd = 0;
@@ -312,21 +368,48 @@ function collaborate(
     if (!agents[id].parentId) continue;
     childAgents += 1;
     const totals = activity.get(id)?.totals;
-    childTokens += totals?.total ?? 0;
-    childCostUsd += totals?.costUsd ?? 0;
+    const spend = { tokens: totals?.total ?? 0, costUsd: totals?.costUsd ?? 0 };
+    childTokens += spend.tokens;
+    childCostUsd += spend.costUsd;
     const parent = parentOf(id);
     if (!parent) continue;
+    const first = !fanout.has(parent);
     fanout.set(parent, (fanout.get(parent) ?? 0) + 1);
-    const parentProvider = providerLabel(agents[parent].provider);
-    const childProvider = providerLabel(agents[id].provider);
-    const key = `${parentProvider}\u0000${childProvider}`;
-    const pair = pairs.get(key) ?? {
-      parent: parentProvider,
-      child: childProvider,
-      count: 0,
-    };
-    pair.count += 1;
-    pairs.set(key, pair);
+    countPair(
+      providerPairs,
+      providerLabel(agents[parent].provider),
+      providerLabel(agents[id].provider),
+      spend,
+    );
+    const parentModel = mainModel(parent);
+    countPair(modelPairs, parentModel, mainModel(id), spend);
+    if (parentModel) {
+      const { delegated } = tally(roles, parentModel);
+      delegated.orchestrators += first ? 1 : 0;
+      delegated.children += 1;
+      addSpend(delegated, spend.tokens, spend.costUsd);
+    }
+  }
+
+  for (const [id, entry] of activity) {
+    const agent = agents[id];
+    const role = fanout.has(id)
+      ? "orchestrator"
+      : agent.parentId
+        ? "child"
+        : "solo";
+    for (const [model, usage] of entry.models) {
+      const row = tally(roles, model);
+      row.providers.add(providerLabel(agent.provider));
+      if (usage.own.tokens > 0) {
+        addSpend(row[role], usage.own.tokens, usage.own.costUsd);
+        row[role].agents.add(id);
+      }
+      for (const session of usage.native.sessions) {
+        row.native.sessions.add(`${id}:${session}`);
+      }
+      addSpend(row.native, usage.native.tokens, usage.native.costUsd);
+    }
   }
 
   const collaborative: CollaborationTree[] = [];
@@ -354,9 +437,91 @@ function collaborate(
     nativeSessions: native.sessions.size,
     nativeTokens: native.tokens,
     nativeCostUsd: native.cost,
-    pairs: [...pairs.values()].sort((a, b) => b.count - a.count),
+    providerPairs: sortPairs(providerPairs),
+    modelPairs: sortPairs(modelPairs),
+    models: modelRoles(roles),
     topTrees: collaborative.slice(0, TOP_TREES),
   };
+}
+
+interface RoleTally {
+  providers: Set<string>;
+  orchestrator: Spend & { agents: Set<string> };
+  child: Spend & { agents: Set<string> };
+  solo: Spend & { agents: Set<string> };
+  native: Spend & { sessions: Set<string> };
+  delegated: Spend & { orchestrators: number; children: number };
+}
+
+function tally(roles: Map<string, RoleTally>, model: string): RoleTally {
+  let row = roles.get(model);
+  if (!row) {
+    const role = () => ({ tokens: 0, costUsd: 0, agents: new Set<string>() });
+    row = {
+      providers: new Set(),
+      orchestrator: role(),
+      child: role(),
+      solo: role(),
+      native: { tokens: 0, costUsd: 0, sessions: new Set() },
+      delegated: { tokens: 0, costUsd: 0, orchestrators: 0, children: 0 },
+    };
+    roles.set(model, row);
+  }
+  return row;
+}
+
+function modelRoles(roles: Map<string, RoleTally>): ModelRole[] {
+  const counted = (role: Spend & { agents: Set<string> }) => ({
+    tokens: role.tokens,
+    costUsd: role.costUsd,
+    agents: role.agents.size,
+  });
+  const collaborative = (row: ModelRole) =>
+    row.orchestrator.costUsd + row.child.costUsd + row.native.costUsd;
+  const collaborativeTokens = (row: ModelRole) =>
+    row.orchestrator.tokens + row.child.tokens + row.native.tokens;
+  return [...roles.entries()]
+    .map(([model, row]) => ({
+      model,
+      providers: [...row.providers].sort(),
+      orchestrator: counted(row.orchestrator),
+      child: counted(row.child),
+      solo: counted(row.solo),
+      native: {
+        tokens: row.native.tokens,
+        costUsd: row.native.costUsd,
+        sessions: row.native.sessions.size,
+      },
+      delegated: { ...row.delegated },
+    }))
+    .filter((row) => collaborativeTokens(row) > 0 || row.delegated.children > 0)
+    .sort(
+      (a, b) =>
+        collaborative(b) - collaborative(a) ||
+        collaborativeTokens(b) - collaborativeTokens(a),
+    );
+}
+
+function countPair(
+  pairs: Map<string, CollaborationPair>,
+  parent: string | null,
+  child: string | null,
+  spend: Spend,
+) {
+  const key = `${parent ?? ""}\u0000${child ?? ""}`;
+  let pair = pairs.get(key);
+  if (!pair) {
+    pair = { parent, child, count: 0, tokens: 0, costUsd: 0 };
+    pairs.set(key, pair);
+  }
+  pair.count += 1;
+  addSpend(pair, spend.tokens, spend.costUsd);
+}
+
+function sortPairs(pairs: Map<string, CollaborationPair>) {
+  return [...pairs.values()].sort(
+    (a, b) => b.count - a.count || b.costUsd - a.costUsd,
+  );
 }
 
 function describeTree(
@@ -378,17 +543,21 @@ function describeTree(
     activity.get(id)?.first ?? agents[id].createdAt ?? Number.MAX_SAFE_INTEGER;
 
   const ordered: TreeMember[] = [];
+  const modelTokens = new Map<string, number>();
   const visit = (id: string, depth: number) => {
     const agent = agents[id];
     const entry = activity.get(id);
-    const topModel = entry
-      ? [...entry.models.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
-      : undefined;
+    for (const [model, usage] of entry?.models ?? []) {
+      modelTokens.set(
+        model,
+        (modelTokens.get(model) ?? 0) + usage.own.tokens + usage.native.tokens,
+      );
+    }
     ordered.push({
       agentId: id,
       title: agent.title?.trim() || id.slice(0, 8),
       provider: providerLabel(agent.provider),
-      model: topModel ?? agent.model,
+      model: primaryModel(entry, configuredModel(agent)),
       depth,
       tokens: entry?.totals.total ?? 0,
       costUsd: entry?.totals.costUsd ?? 0,
@@ -412,6 +581,15 @@ function describeTree(
     agents: ordered.length,
     depth: Math.max(...ordered.map((member) => member.depth)),
     providers: [...new Set(ordered.map((member) => member.provider))],
+    models: [
+      ...new Set([
+        ...[...modelTokens.entries()]
+          .sort((a, b) => b[1] - a[1])
+          .map(([model]) => model),
+        // Members whose logs are gone still name their configured model.
+        ...ordered.flatMap((member) => (member.model ? [member.model] : [])),
+      ]),
+    ],
     tokens: ordered.reduce((sum, member) => sum + member.tokens, 0),
     costUsd: ordered.reduce((sum, member) => sum + member.costUsd, 0),
     firstActiveAt: stamps.length ? Math.min(...stamps) : null,

@@ -6,11 +6,13 @@ import { Pressable, Text, View } from "react-native";
 import type { Collaboration, CollaborationTree } from "../shared/stats";
 import { compact as short, percent, usd } from "./format";
 import type { Translate } from "./i18n";
+import { ModelRoles, PairList } from "./collaboration-models";
 import { StatTile, TABULAR, cardStyle, sectionTitleStyle } from "./ui";
 
 export interface CollaborationSectionProps {
   collaboration: Collaboration;
   totalCostUsd: number;
+  onPickModel(model: string): void;
   navigation: PluginScreenProps["navigation"];
   theme: PluginTheme;
   compact: boolean;
@@ -20,6 +22,7 @@ export interface CollaborationSectionProps {
 export function CollaborationSection({
   collaboration: c,
   totalCostUsd,
+  onPickModel,
   navigation,
   theme,
   compact,
@@ -37,26 +40,6 @@ export function CollaborationSection({
         gap: 12,
       },
       label: { color: theme.colors.foregroundMuted, fontSize: 12 },
-      pairs: {
-        flexDirection: "row" as const,
-        flexWrap: "wrap" as const,
-        gap: 8,
-      },
-      pair: {
-        flexDirection: "row" as const,
-        alignItems: "center" as const,
-        gap: 6,
-        paddingHorizontal: 10,
-        paddingVertical: 5,
-        borderRadius: 999,
-        backgroundColor: theme.colors.surface2,
-      },
-      pairText: { color: theme.colors.foreground, fontSize: 12 },
-      pairCount: {
-        color: theme.colors.foregroundMuted,
-        fontSize: 12,
-        ...TABULAR,
-      },
       empty: { color: theme.colors.foregroundMuted, fontSize: 13 },
     }),
     [theme, compact],
@@ -126,27 +109,20 @@ export function CollaborationSection({
         />
       </View>
 
-      {c.pairs.length > 0 ? (
-        <View style={{ gap: 8 }}>
-          <Text style={styles.label}>{t("collab.pairs")}</Text>
-          <View style={styles.pairs}>
-            {c.pairs.map((pair) => (
-              <View key={`${pair.parent}>${pair.child}`} style={styles.pair}>
-                <Text style={styles.pairText}>{pair.parent}</Text>
-                <Icon
-                  name="ArrowRight"
-                  size={12}
-                  color={theme.colors.foregroundMuted}
-                />
-                <Text style={styles.pairText}>{pair.child}</Text>
-                <Text style={styles.pairCount}>
-                  {t("collab.pairCount", { count: pair.count })}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-      ) : null}
+      <ModelRoles
+        models={c.models}
+        onPick={onPickModel}
+        theme={theme}
+        compact={compact}
+        t={t}
+      />
+
+      <PairList
+        modelPairs={c.modelPairs}
+        providerPairs={c.providerPairs}
+        theme={theme}
+        t={t}
+      />
 
       <View style={{ gap: 8 }}>
         <Text style={styles.label}>{t("collab.topTrees")}</Text>
@@ -233,6 +209,9 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
   ]
     .filter(Boolean)
     .join(" · ");
+  const models =
+    tree.models.slice(0, 4).join(" / ") +
+    (tree.models.length > 4 ? ` +${tree.models.length - 4}` : "");
   return (
     <View style={styles.box}>
       <Pressable
@@ -254,6 +233,11 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
           <Text style={styles.meta} numberOfLines={1}>
             {meta}
           </Text>
+          {tree.models.length > 0 ? (
+            <Text style={styles.meta} numberOfLines={1}>
+              {t("collab.treeModels", { models })}
+            </Text>
+          ) : null}
         </View>
         <View style={styles.numbers}>
           <Text style={styles.cost}>{usd(tree.costUsd)}</Text>

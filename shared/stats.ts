@@ -50,6 +50,7 @@ export const CollaborationTreeSchema = z.object({
   agents: z.number(),
   depth: z.number(),
   providers: z.array(z.string()),
+  models: z.array(z.string()),
   tokens: z.number(),
   costUsd: z.number(),
   firstActiveAt: z.number().nullable(),
@@ -57,6 +58,33 @@ export const CollaborationTreeSchema = z.object({
   members: z.array(TreeMemberSchema),
 });
 export type CollaborationTree = z.infer<typeof CollaborationTreeSchema>;
+
+const SpendSchema = z.object({ tokens: z.number(), costUsd: z.number() });
+
+// A null model means the agent has no usage in range and no configured model.
+export const CollaborationPairSchema = SpendSchema.extend({
+  parent: z.string().nullable(),
+  child: z.string().nullable(),
+  count: z.number(),
+});
+export type CollaborationPair = z.infer<typeof CollaborationPairSchema>;
+
+// Usage of one model split by the role of the agent that spent it. Agents
+// with children are orchestrators; native covers provider subagents.
+export const ModelRoleSchema = z.object({
+  model: z.string(),
+  providers: z.array(z.string()),
+  orchestrator: SpendSchema.extend({ agents: z.number() }),
+  child: SpendSchema.extend({ agents: z.number() }),
+  native: SpendSchema.extend({ sessions: z.number() }),
+  solo: SpendSchema.extend({ agents: z.number() }),
+  // Children launched by orchestrators whose main model is this one.
+  delegated: SpendSchema.extend({
+    orchestrators: z.number(),
+    children: z.number(),
+  }),
+});
+export type ModelRole = z.infer<typeof ModelRoleSchema>;
 
 export const CollaborationSchema = z.object({
   activeAgents: z.number(),
@@ -71,9 +99,9 @@ export const CollaborationSchema = z.object({
   nativeSessions: z.number(),
   nativeTokens: z.number(),
   nativeCostUsd: z.number(),
-  pairs: z.array(
-    z.object({ parent: z.string(), child: z.string(), count: z.number() }),
-  ),
+  providerPairs: z.array(CollaborationPairSchema),
+  modelPairs: z.array(CollaborationPairSchema),
+  models: z.array(ModelRoleSchema),
   topTrees: z.array(CollaborationTreeSchema),
 });
 export type Collaboration = z.infer<typeof CollaborationSchema>;
