@@ -336,7 +336,7 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
                 ? (agentId) => navigation.openAgent({ agentId })
                 : undefined
             }
-            nodeWidth={220}
+            nodeWidth={260}
             nodeHeight={44}
             columnGap={48}
             theme={theme}

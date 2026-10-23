@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   compact,
+  interpolate,
   parseInputValue,
   percent,
   toInputValue,
@@ -45,4 +46,18 @@ test("presets end now and default to the last 24 hours", () => {
     to: now,
   });
   assert.deepEqual(presetRange("all", now), { from: 0, to: now });
+});
+
+test("interpolate fills placeholders and picks plural words", () => {
+  const template = "{count} {count|agent|agents} · {cost}";
+  assert.equal(interpolate(template, { count: 1, cost: "$1" }), "1 agent · $1");
+  assert.equal(
+    interpolate(template, { count: 3, cost: "$1" }),
+    "3 agents · $1",
+  );
+  assert.equal(
+    interpolate(template, { count: 0, cost: "$0" }),
+    "0 agents · $0",
+  );
+  assert.equal(interpolate("{missing} {x|a|b}", {}), "{missing} {x|a|b}");
 });

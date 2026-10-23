@@ -150,6 +150,7 @@ export function CollaborationTopology({
           nodes={graphNodes}
           edges={graphEdges}
           mode="layered"
+          nodeWidth={220}
           columnTitle={(column) => t("collab.layer", { depth: column })}
           selectedId={focus ? selected : null}
           onPressNode={(id) =>

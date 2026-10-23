@@ -66,3 +66,20 @@ export function parseInputValue(text: string): number | null {
   if (+h > 23 || +mi > 59) return null;
   return date.getTime();
 }
+
+// Fills {name} placeholders. {name|one|other} picks a word by whether the
+// named number is exactly 1, for languages that pluralise.
+export function interpolate(
+  template: string,
+  params: Record<string, string | number>,
+): string {
+  return template
+    .replace(
+      /\{(\w+)\|([^|}]*)\|([^}]*)\}/g,
+      (match, name: string, one, other) =>
+        name in params ? (Number(params[name]) === 1 ? one : other) : match,
+    )
+    .replace(/\{(\w+)\}/g, (match, name: string) =>
+      name in params ? String(params[name]) : match,
+    );
+}

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { interpolate } from "./format";
 import { hostLanguage } from "./web";
 
 export type Language = "zh" | "en";
@@ -243,17 +244,18 @@ const en: Messages = {
   "table.empty": "No usage in this range",
   "table.hint": "Tap a row to filter by it",
   "table.rowDetail": "In {input} · Out {output} · Cache {cache}",
-  "table.agents": "{count} agents",
+  "table.agents": "{count} {count|agent|agents}",
   noProject: "No project",
   "collab.title": "Multi-agent collaboration",
   "collab.subtitle":
     "Built from Paseo parent and child agents. Provider subagents (Codex threads, Claude subagents) are counted separately.",
   "collab.trees": "Collaborations",
-  "collab.treesDetail": "{agents} agents involved",
+  "collab.treesDetail": "{agents} {agents|agent|agents} involved",
   "collab.children": "Child agents",
-  "collab.childrenDetail": "{orchestrators} orchestrators",
+  "collab.childrenDetail":
+    "{orchestrators} {orchestrators|orchestrator|orchestrators}",
   "collab.fanout": "Average fan-out",
-  "collab.fanoutDetail": "Up to {max} children",
+  "collab.fanoutDetail": "Up to {max} {max|child|children}",
   "collab.depth": "Max depth",
   "collab.childShare": "Child agent cost share",
   "collab.native": "Provider subagent sessions",
@@ -278,20 +280,21 @@ const en: Messages = {
   "collab.col.native": "Subagents",
   "collab.col.delegated": "Delegated",
   "collab.col.share": "Collaborative",
-  "collab.roleAgents": "{tokens} · {count} agents",
-  "collab.roleSessions": "{tokens} · {count} sessions",
-  "collab.delegatedValue": "{count} children",
+  "collab.roleAgents": "{tokens} · {count} {count|agent|agents}",
+  "collab.roleSessions": "{tokens} · {count} {count|session|sessions}",
+  "collab.delegatedValue": "{count} {count|child|children}",
   "collab.delegatedDetail": "{cost} · fan-out {fanout}",
   "collab.compactRoles":
     "Orchestrator {orchestrator} · Child {child} · Subagents {native}",
-  "collab.compactDelegated": "Delegated {count} children · {cost}",
+  "collab.compactDelegated":
+    "Delegated {count} {count|child|children} · {cost}",
   "collab.treeModels": "Models: {models}",
   "collab.topology": "Collaboration topology",
   "collab.topologyHint":
     "Each node groups agents at one level that use the same model (or provider). Thicker lines mean more child agents; dashed nodes are provider subagents, counted in sessions; the bar under a node shows its spend. Tap a node to see what it connects to.",
   "collab.layer": "Level {depth}",
-  "collab.nodeAgents": "{count} agents · {cost}",
-  "collab.nodeSessions": "{count} sessions · {cost}",
+  "collab.nodeAgents": "{count} {count|agent|agents} · {cost}",
+  "collab.nodeSessions": "{count} {count|session|sessions} · {cost}",
   "collab.nativeNode": "{name} (subagent)",
   "collab.detailIn": "From",
   "collab.detailOut": "To",
@@ -301,17 +304,18 @@ const en: Messages = {
   "collab.openHint": "Tap a node to open the agent",
   "collab.pairCount": "×{count}",
   "collab.topTrees": "Top collaborations",
-  "collab.treeMeta": "{agents} agents · depth {depth} · {providers}",
-  "collab.memberNative": "{count} subagents",
+  "collab.treeMeta":
+    "{agents} {agents|agent|agents} · depth {depth} · {providers}",
+  "collab.memberNative": "{count} {count|subagent|subagents}",
   "collab.empty": "No multi-agent collaboration in this range",
   "collab.expand": "Expand {title}",
   "collab.openAgent": "Open agent {title}",
   "coverage.title": "About this data",
   "coverage.logs": "Usage logs found for {found} of {total} agents",
   "coverage.not_found":
-    "{provider}: local logs for {count} agents are gone (likely cleaned up)",
+    "{provider}: local logs for {count} {count|agent|agents} are gone (likely cleaned up)",
   "coverage.unsupported":
-    "{provider}: usage for {count} agents is not supported yet",
+    "{provider}: usage for {count} {count|agent|agents} is not supported yet",
   "coverage.unpriced":
     "Unpriced models (counted as $0, set a price in settings): {models}",
   "coverage.pricing.online":
@@ -392,10 +396,7 @@ export function translate(
   params?: MessageParams,
 ): string {
   const template = MESSAGES[language][key];
-  if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (match, name: string) =>
-    name in params ? String(params[name]) : match,
-  );
+  return params ? interpolate(template, params) : template;
 }
 
 export function useI18n(): { language: Language; t: Translate } {
