@@ -4,6 +4,8 @@
 
 [Paseo](https://paseo.sh) 插件：按客户端（provider）、模型、项目统计 agent 的 token 用量与 USD 费用，并统计多 agent 协作情况。
 
+![用量总览：费用、tokens、请求数与按客户端的明细](docs/images/zh/overview.png)
+
 ## 功能
 
 - **三个维度**：按客户端、模型、项目查看输入、输出、缓存读、缓存写、总 tokens、费用与占比；可按费用或 tokens 排序，点击行即按其筛选。
@@ -13,6 +15,38 @@
 - **协作具体到模型**：每个模型作为编排者、子 agent、内置子代理时各自的花费与协作占比，以该模型为主模型的编排者委派了多少子 agent、花了多少、扇出多少，以及按模型或客户端的父 → 子组合（如 `claude-opus-5-5 → gpt-6.1-sol ×93`）。点击模型即可按其筛选整页。
 - **拓扑图**：按层级展示 agent 之间的派生关系，节点为同一层里同一模型（或客户端）的 agent，连线粗细表示子 agent 数量，虚线框为内置子代理；点击节点高亮并列出其上下游。协作任务排行中的每个任务也可切换到 agent 级拓扑，点击节点直接打开该 agent。
 - **热更新**：检测 GitHub Release 新版本，统计页一键更新，可开启自动更新，Paseo 无需重启。
+
+## 界面预览
+
+> 截图均使用模拟数据（由 `scripts/demo-ledger.mjs` 生成）。
+
+### 可搜索的多选筛选
+
+客户端、模型、项目三个下拉都支持搜索与多选，组合后作用于整页。
+
+![模型下拉中搜索并勾选两个模型](docs/images/zh/filters.png)
+
+### 协作拓扑
+
+按层级展示 agent 之间的派生关系。点击节点后高亮其上下游，并在下方列出次数与花费。
+
+![按模型分组的协作拓扑，选中第 1 层的 gpt-6.1-sol 节点](docs/images/zh/topology.png)
+
+### 模型分工
+
+每个模型作为编排者、子 agent、内置子代理时各自的花费，以及委派情况与协作占比。
+
+![模型分工表](docs/images/zh/models.png)
+
+### 单个协作任务的拓扑
+
+在协作任务排行中展开任务并切换到“拓扑”，点击节点即可打开对应 agent。
+
+![单个协作任务的 agent 级拓扑](docs/images/zh/task-topology.png)
+
+### 移动端与深色模式
+
+<img src="docs/images/zh/mobile-dark.png" alt="窄屏深色模式下的用量统计" width="320">
 
 ## 数据来源
 
@@ -58,6 +92,8 @@ npm run check    # 类型检查、测试、格式、版本一致性
 ```
 
 `npm run dev` 若发现同名插件已从其他来源安装，可用 `npm run dev -- --id paseo-stats-dev` 以另一个 ID 安装开发副本；`--home <path>` 指定守护进程目录。
+
+README 截图分中英文两套（`docs/images/zh`、`docs/images/en`），使用模拟数据，不含真实项目或用量。重新截图时，先用 `node scripts/demo-ledger.mjs <PASEO_HOME>/plugin-data/paseo-stats --lang zh|en` 写入对应语言的模拟账本，再在该临时守护进程的界面中截图（建议让守护进程的 `HOME` 指向空目录，以免读到本机日志）。
 
 ## 发版
 
