@@ -33,9 +33,16 @@ Costs are estimates. When a log records its own cost (Pi and Oh My Pi), that val
 - Custom prices: USD per million tokens for input, output, cache read and cache write. Use them for relay or private model names, or to match your actual billing.
 - Update automatically: checks the plugin's GitHub releases every 6 hours and installs a new version through `paseo plugin update`. The plugin reloads; the daemon keeps running. Off by default.
 
+## Network access
+
+The plugin makes two kinds of outbound requests from the daemon, and neither includes usage data, prompts or credentials:
+
+- `raw.githubusercontent.com` for the LiteLLM public price list, at most once a day while public prices are on.
+- `api.github.com` for this plugin's latest release, when you open the screen, every 6 hours, or when you ask it to check.
+
 ## Updates
 
-When a newer GitHub release exists, the stats screen shows it with a link to the release notes and an update button. Updating works for copies installed from GitHub or npm. Copies installed from a local directory show how to update by hand. The plugin runs the `paseo` CLI found on the daemon's `PATH` or in the usual install locations; set `PASEO_CLI` if it lives elsewhere.
+When a newer GitHub release exists, the stats screen shows it with a link to the release notes and an update button. Applying an update runs `paseo plugin update` with the release tag; the plugin then reloads and the daemon keeps running. The plugin looks for the `paseo` command on the daemon's `PATH` and in the usual install locations, and uses `PASEO_CLI` when it is set. Updating from inside the plugin works for copies installed directly from GitHub or npm. Copies installed from a local directory show how to update by hand, and copies installed from this registry show that registry listings update through Paseo's plugin list or a new reviewed version.
 
 ## Limits
 

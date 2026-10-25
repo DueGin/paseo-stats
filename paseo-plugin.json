@@ -1,6 +1,19 @@
 {
   "id": "paseo-stats",
   "name": "Usage stats",
+  "description": "Token usage and USD cost by provider, model and project, with multi-agent collaboration stats and topology",
+  "translations": {
+    "zh-CN": {
+      "name": "用量统计",
+      "description": "按客户端、模型、项目统计 token 用量与美元费用，并分析多 agent 协作与拓扑"
+    }
+  },
+  "media": [
+    "assets/marketplace/overview.png",
+    "assets/marketplace/collaboration-topology.png",
+    "assets/marketplace/model-roles.png",
+    "assets/marketplace/filters.png"
+  ],
   "requirements": {
     "paseo": ">=0.12.0"
   }
