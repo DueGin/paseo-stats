@@ -8,9 +8,11 @@ export const UpdateStatusSchema = z.object({
   releaseUrl: z.string().nullable(),
   publishedAt: z.string().nullable(),
   updateAvailable: z.boolean(),
-  install: z.enum(["git", "npm", "directory", "unknown"]),
+  install: z.enum(["git", "npm", "directory", "registry", "unknown"]),
   // Why an available update cannot be applied from inside the plugin.
-  blocked: z.enum(["directory", "not_installed", "no_cli"]).nullable(),
+  blocked: z
+    .enum(["directory", "registry", "not_installed", "no_cli"])
+    .nullable(),
   checkedAt: z.number().nullable(),
   error: z.string().nullable(),
   applying: z.boolean(),

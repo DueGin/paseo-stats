@@ -178,6 +178,8 @@ const zh = {
   "update.notes": "更新说明",
   "update.auto": "自动更新",
   "update.autoHint": "每 6 小时检查一次 GitHub Release，有新版本时自动更新",
+  "update.blocked.registry":
+    "当前从 Paseo 插件市场安装，版本由市场审核固定。请在 设置 → 插件 中更新，或等待市场发布新版本",
   "update.blocked.directory":
     "当前从本地目录安装，请在源码目录 git pull 后执行 paseo plugin reload",
   "update.blocked.not_installed": "未在插件列表中找到本插件，无法自动更新",
@@ -369,6 +371,8 @@ const en: Messages = {
   "update.auto": "Update automatically",
   "update.autoHint":
     "Checks GitHub releases every 6 hours and installs new versions",
+  "update.blocked.registry":
+    "Installed from the Paseo plugin registry, which pins reviewed versions. Update it under Settings → Plugins, or wait for the registry to publish a new version.",
   "update.blocked.directory":
     "Installed from a local directory. Run git pull there, then paseo plugin reload.",
   "update.blocked.not_installed":

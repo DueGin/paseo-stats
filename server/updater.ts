@@ -22,6 +22,8 @@ export interface Installation {
   id: string;
   kind: UpdateStatus["install"];
   repository: string;
+  // Registry listings pin a reviewed revision; the CLI refuses to move them.
+  registry: boolean;
 }
 
 export interface Release {
@@ -155,6 +157,7 @@ export function findInstallation(list: unknown): Installation | null {
       kind: String(identity.kind ?? ""),
       remote: identity.remote ?? identity.url,
       packageName: identity.packageName,
+      registry: Boolean(identity.registry),
     };
   });
   const repoName = PLUGIN_REPOSITORY.split("/")[1];
@@ -165,14 +168,16 @@ export function findInstallation(list: unknown): Installation | null {
     ) ??
     entries.find((entry) => entry.packageName === PLUGIN_ID);
   if (!match) return null;
-  const kind =
-    match.kind === "git" || match.kind === "npm" || match.kind === "directory"
+  const kind = match.registry
+    ? ("registry" as const)
+    : match.kind === "git" || match.kind === "npm" || match.kind === "directory"
       ? match.kind
-      : "unknown";
+      : ("unknown" as const);
   return {
     id: match.id,
     kind,
     repository: githubRepository(match.remote) ?? PLUGIN_REPOSITORY,
+    registry: match.registry,
   };
 }
 
@@ -221,7 +226,12 @@ export class Updater {
     }
     const cli = this.cli();
     const installation = await this.installation(cli);
-    if (!cli || !installation || installation.kind === "directory") {
+    if (
+      !cli ||
+      !installation ||
+      installation.kind === "directory" ||
+      installation.kind === "registry"
+    ) {
       throw new Error("This installation cannot update itself");
     }
     const target =
@@ -311,7 +321,9 @@ export class Updater {
         ? "not_installed"
         : installation.kind === "directory"
           ? "directory"
-          : null;
+          : installation.kind === "registry"
+            ? "registry"
+            : null;
     this.status = {
       ...this.status,
       latestVersion: release?.version ?? null,

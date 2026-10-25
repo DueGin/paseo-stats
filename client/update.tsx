@@ -234,7 +234,7 @@ export function UpdateSection({
           label={t("update.auto")}
           hint={t("update.autoHint")}
           value={autoUpdate}
-          disabled={saving || status?.blocked === "directory"}
+          disabled={saving || status?.blocked !== null}
           onValueChange={onAutoUpdateChange}
         />
         {status?.blocked ? (

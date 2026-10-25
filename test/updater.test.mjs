@@ -61,7 +61,12 @@ test("findInstallation prefers the default id and reads the source kind", () => 
         },
       },
     ]),
-    { id: "paseo-stats", kind: "git", repository: "fork/paseo-stats" },
+    {
+      id: "paseo-stats",
+      kind: "git",
+      repository: "fork/paseo-stats",
+      registry: false,
+    },
   );
   assert.deepEqual(
     findInstallation([
@@ -75,12 +80,22 @@ test("findInstallation prefers the default id and reads the source kind", () => 
         },
       },
     ]),
-    { id: "stats-renamed", kind: "git", repository: "me/paseo-stats" },
+    {
+      id: "stats-renamed",
+      kind: "git",
+      repository: "me/paseo-stats",
+      registry: false,
+    },
   );
   assert.equal(findInstallation([{ id: "x" }]), null);
 });
 
-function fakeDeps({ kind = "git", release = NEWER, status = 200 } = {}) {
+function fakeDeps({
+  kind = "git",
+  registry = false,
+  release = NEWER,
+  status = 200,
+} = {}) {
   const calls = { exec: [], spawn: [], fetch: [] };
   let child;
   const deps = {
@@ -98,6 +113,7 @@ function fakeDeps({ kind = "git", release = NEWER, status = 200 } = {}) {
               identity: {
                 kind,
                 remote: "https://github.com/me/paseo-stats.git",
+                ...(registry ? { registry: { id: "me/paseo-stats" } } : {}),
               },
             },
           },
@@ -212,4 +228,15 @@ test("apply runs paseo plugin update for the latest tag and reports failures", a
 
   const local = new Updater(dataDir(), fakeDeps({ kind: "directory" }).deps);
   await assert.rejects(local.apply(NEWER), /cannot update itself/);
+});
+
+test("registry listings cannot update themselves", async () => {
+  const fake = fakeDeps({ registry: true });
+  const updater = new Updater(dataDir(), fake.deps);
+  const status = await updater.check();
+  assert.equal(status.install, "registry");
+  assert.equal(status.updateAvailable, true);
+  assert.equal(status.blocked, "registry");
+  await assert.rejects(updater.apply(NEWER), /cannot update itself/);
+  assert.equal(fake.calls.spawn.length, 0);
 });
