@@ -33,6 +33,10 @@ Costs are estimates. When a log records its own cost (Pi and Oh My Pi), that val
 - Custom prices: USD per million tokens for input, output, cache read and cache write. Use them for relay or private model names, or to match your actual billing.
 - Update automatically: checks the plugin's GitHub releases every 6 hours and installs a new version through `paseo plugin update`. The plugin reloads; the daemon keeps running. Off by default.
 
+## Local data
+
+The plugin reads provider session logs listed above and Paseo's agent and project records. It never modifies those files. It writes only its own directory under `~/.paseo/plugin-data/paseo-stats`: the usage ledger, a sync state file, a cached price list and an update log. Settings are stored through Paseo's plugin settings. Removing the plugin leaves that directory in place, and deleting it resets the collected history.
+
 ## Network access
 
 The plugin makes two kinds of outbound requests from the daemon, and neither includes usage data, prompts or credentials:
