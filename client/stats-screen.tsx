@@ -1,10 +1,6 @@
 import type { PluginScreenProps } from "@getpaseo/plugin/client";
 import { useRpc } from "@getpaseo/plugin/client";
-import {
-  Icon,
-  ScrollView,
-  TextInput,
-} from "@getpaseo/plugin/client/react-native";
+import { Icon, ScrollView, TextInput } from "@getpaseo/plugin/client/ui";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
@@ -12,10 +8,13 @@ import { NO_PROJECT_KEY, statsQueryRpc, type Option } from "../shared/stats";
 import { Breakdown, type Dimension, type SortKey } from "./breakdown";
 import { CollaborationSection } from "./collaboration";
 import { CoverageNote } from "./coverage";
+import type { ExportContext } from "./export";
+import { ExportMenu } from "./export-menu";
 import { dateTime, parseInputValue, toInputValue } from "./format";
 import { useI18n } from "./i18n";
 import { MultiSelect } from "./multi-select";
 import { Summary } from "./summary";
+import { TrendChart } from "./trend";
 import { UpdateBanner } from "./update";
 import {
   RANGE_PRESETS,
@@ -42,6 +41,7 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
   const [openSelect, setOpenSelect] = useState<Dimension | null>(null);
   const [dimension, setDimension] = useState<Dimension>("provider");
   const [sort, setSort] = useState<SortKey>("cost");
+  const [exportOpen, setExportOpen] = useState(false);
   const forceRefresh = useRef(false);
 
   const stats = useQuery({
@@ -62,6 +62,7 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
         models: filters.model,
         projects: filters.project,
         refresh,
+        tzOffset: -new Date().getTimezoneOffset(),
       });
     },
   });
@@ -216,6 +217,14 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
     setCustom({ from, to });
   };
 
+  const zoomTo = (range: TimeRange) => {
+    setPreset("custom");
+    setCustomError(false);
+    setDraftFrom(toInputValue(range.from));
+    setDraftTo(toInputValue(range.to));
+    setCustom(range);
+  };
+
   const setFilter = (key: Dimension, values: string[]) =>
     setFilters((current) => ({ ...current, [key]: values }));
 
@@ -252,6 +261,41 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
     t,
   });
 
+  const exportContext = useMemo<ExportContext | null>(() => {
+    if (!data) return null;
+    const range =
+      preset !== "custom"
+        ? presetRange(preset, data.generatedAt)
+        : (custom ?? { from: 0, to: data.generatedAt });
+    const named = (key: Dimension, list: readonly Option[]) =>
+      filters[key].map((value) => {
+        const option = list.find((entry) => entry.value === value);
+        return key === "project" && value === NO_PROJECT_KEY
+          ? t("noProject")
+          : option?.label || value;
+      });
+    return {
+      data,
+      range,
+      filters: [
+        {
+          label: t("filter.provider"),
+          values: named("provider", data.options.providers),
+        },
+        {
+          label: t("filter.model"),
+          values: named("model", data.options.models),
+        },
+        {
+          label: t("filter.project"),
+          values: named("project", data.options.projects),
+        },
+      ],
+      language,
+      t,
+    };
+  }, [data, preset, custom, filters, language, t]);
+
   const rows =
     dimension === "provider"
       ? data?.byProvider
@@ -281,6 +325,19 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
                   : ""}
             </Text>
           </View>
+          {exportContext ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={t("export.open")}
+              onPress={() => setExportOpen(true)}
+              style={styles.iconButton}
+            >
+              <Icon name="Download" size={14} color={theme.colors.foreground} />
+              {compact ? null : (
+                <Text style={styles.buttonText}>{t("export.open")}</Text>
+              )}
+            </Pressable>
+          ) : null}
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t("status.refresh")}
@@ -357,7 +414,7 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
                 value={draftFrom}
                 onChangeText={setDraftFrom}
                 onSubmitEditing={applyCustom}
-                placeholder="YYYY-MM-DD HH:mm"
+                placeholder={t("custom.placeholder")}
                 placeholderTextColor={theme.colors.foregroundMuted}
                 style={styles.input}
               />
@@ -366,7 +423,7 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
                 value={draftTo}
                 onChangeText={setDraftTo}
                 onSubmitEditing={applyCustom}
-                placeholder="YYYY-MM-DD HH:mm"
+                placeholder={t("custom.placeholder")}
                 placeholderTextColor={theme.colors.foregroundMuted}
                 style={styles.input}
               />
@@ -391,6 +448,16 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
           accessibilityLabel={t("filter.done")}
           onPress={() => setOpenSelect(null)}
           style={styles.backdrop}
+        />
+      ) : null}
+
+      {exportContext ? (
+        <ExportMenu
+          context={exportContext}
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          theme={theme}
+          t={t}
         />
       ) : null}
 
@@ -435,6 +502,15 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
               compact={compact}
               t={t}
             />
+            <TrendChart
+              timeline={data.timeline}
+              options={data.options}
+              onZoom={zoomTo}
+              theme={theme}
+              compact={compact}
+              language={language}
+              t={t}
+            />
             <Breakdown
               rows={rows ?? []}
               dimension={dimension}
@@ -450,6 +526,12 @@ export function StatsScreen({ theme, layout, navigation }: PluginScreenProps) {
               collaboration={data.collaboration}
               totalCostUsd={data.totals.costUsd}
               onPickModel={(model) => pick("model", model)}
+              onPickProviderLabel={(label) => {
+                const option = data.options.providers.find(
+                  (entry) => entry.label === label,
+                );
+                if (option) pick("provider", option.value);
+              }}
               navigation={navigation}
               theme={theme}
               compact={compact}

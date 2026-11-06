@@ -15,6 +15,7 @@ import {
   updateCheckRpc,
   type UpdateStatus,
 } from "../shared/update";
+import { localizeError } from "./errors";
 import { dateTime } from "./format";
 import type { Language, Translate } from "./i18n";
 
@@ -46,6 +47,9 @@ export function useUpdate() {
 function errorText(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
+
+const localized = (message: string | null, t: Translate) =>
+  message === null ? null : localizeError(message, t);
 
 export function UpdateBanner({
   theme,
@@ -103,8 +107,10 @@ export function UpdateBanner({
   }
   const tag = status.latestTag;
   const applying = status.applying || apply.isPending;
-  const failure =
-    status.applyError ?? (apply.error ? errorText(apply.error) : null);
+  const failure = localized(
+    status.applyError ?? (apply.error ? errorText(apply.error) : null),
+    t,
+  );
   return (
     <View style={styles.banner}>
       <View style={styles.text}>
@@ -182,10 +188,14 @@ export function UpdateSection({
   };
   const latest = status?.latestTag ?? null;
   const applying = Boolean(status?.applying) || apply.isPending;
-  const checkError =
-    status?.error ?? (refresh.error ? errorText(refresh.error) : null);
-  const failure =
-    status?.applyError ?? (apply.error ? errorText(apply.error) : null);
+  const checkError = localized(
+    status?.error ?? (refresh.error ? errorText(refresh.error) : null),
+    t,
+  );
+  const failure = localized(
+    status?.applyError ?? (apply.error ? errorText(apply.error) : null),
+    t,
+  );
   return (
     <SettingsSection title={t("update.section")}>
       <SettingsCard>

@@ -1,6 +1,6 @@
 import type { PluginScreenProps } from "@getpaseo/plugin/client";
 import type { PluginTheme } from "@getpaseo/plugin";
-import { Icon } from "@getpaseo/plugin/client/react-native";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { Collaboration, CollaborationTree } from "../shared/stats";
@@ -8,6 +8,7 @@ import { compact as short, percent, usd } from "./format";
 import type { Translate } from "./i18n";
 import { ModelRoles, PairList } from "./collaboration-models";
 import { CollaborationTopology } from "./collaboration-topology";
+import { primaryPath } from "./topology";
 import { TopologyGraph, type GraphNodeView } from "./topology-graph";
 import { StatTile, TABULAR, cardStyle, sectionTitleStyle } from "./ui";
 
@@ -15,6 +16,8 @@ export interface CollaborationSectionProps {
   collaboration: Collaboration;
   totalCostUsd: number;
   onPickModel(model: string): void;
+  // Topology nodes in the provider view carry the provider's label.
+  onPickProviderLabel(label: string): void;
   navigation: PluginScreenProps["navigation"];
   theme: PluginTheme;
   compact: boolean;
@@ -25,6 +28,7 @@ export function CollaborationSection({
   collaboration: c,
   totalCostUsd,
   onPickModel,
+  onPickProviderLabel,
   navigation,
   theme,
   compact,
@@ -57,7 +61,7 @@ export function CollaborationSection({
         <StatTile
           label={t("collab.trees")}
           value={String(c.trees)}
-          detail={t("collab.treesDetail", { agents: c.activeAgents })}
+          detail={t("collab.treesDetail", { count: c.activeAgents })}
           basis="30%"
           theme={theme}
           compact={compact}
@@ -65,9 +69,7 @@ export function CollaborationSection({
         <StatTile
           label={t("collab.children")}
           value={String(c.childAgents)}
-          detail={t("collab.childrenDetail", {
-            orchestrators: c.orchestrators,
-          })}
+          detail={t("collab.childrenDetail", { count: c.orchestrators })}
           basis="30%"
           theme={theme}
           compact={compact}
@@ -75,7 +77,7 @@ export function CollaborationSection({
         <StatTile
           label={t("collab.fanout")}
           value={c.avgFanout ? c.avgFanout.toFixed(1) : "0"}
-          detail={t("collab.fanoutDetail", { max: c.maxFanout })}
+          detail={t("collab.fanoutDetail", { count: c.maxFanout })}
           basis="30%"
           theme={theme}
           compact={compact}
@@ -111,7 +113,14 @@ export function CollaborationSection({
         />
       </View>
 
-      <CollaborationTopology topology={c.topology} theme={theme} t={t} />
+      <CollaborationTopology
+        topology={c.topology}
+        onPick={(dimension, key) =>
+          dimension === "model" ? onPickModel(key) : onPickProviderLabel(key)
+        }
+        theme={theme}
+        t={t}
+      />
 
       <ModelRoles
         models={c.models}
@@ -197,6 +206,47 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
       ),
     [tree.members],
   );
+  // The branch that cost most: at each agent, the child whose subtree spent
+  // the most.
+  const primary = useMemo(() => {
+    if (view !== "graph") return null;
+    const subtree = new Map<string, number>();
+    const children = new Map<string, string[]>();
+    for (const member of tree.members) {
+      if (!member.parentId) continue;
+      children.set(member.parentId, [
+        ...(children.get(member.parentId) ?? []),
+        member.agentId,
+      ]);
+    }
+    const own = new Map(tree.members.map((m) => [m.agentId, m.costUsd]));
+    const total = (id: string, seen = new Set<string>()): number => {
+      if (seen.has(id)) return 0;
+      seen.add(id);
+      const cached = subtree.get(id);
+      if (cached !== undefined) return cached;
+      const value =
+        (own.get(id) ?? 0) +
+        (children.get(id) ?? []).reduce(
+          (sum, kid) => sum + total(kid, seen),
+          0,
+        );
+      subtree.set(id, value);
+      return value;
+    };
+    return primaryPath(
+      tree.members.map((m) => ({
+        id: m.agentId,
+        depth: m.depth,
+        costUsd: total(m.agentId),
+      })),
+      graphEdges.map((edge) => ({
+        ...edge,
+        costUsd: total(edge.to),
+        count: 1,
+      })),
+    );
+  }, [tree.members, graphEdges, view]);
   const styles = useMemo(
     () => ({
       box: {
@@ -254,7 +304,7 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
   const meta = [
     tree.projectName,
     t("collab.treeMeta", {
-      agents: tree.agents,
+      count: tree.agents,
       depth: tree.depth,
       providers: tree.providers.join(" / "),
     }),
@@ -293,7 +343,9 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
         </View>
         <View style={styles.numbers}>
           <Text style={styles.cost}>{usd(tree.costUsd)}</Text>
-          <Text style={styles.tokens}>{short(tree.tokens)} tokens</Text>
+          <Text style={styles.tokens}>
+            {t("unit.tokens", { value: short(tree.tokens) })}
+          </Text>
         </View>
       </Pressable>
       {open ? (
@@ -336,6 +388,7 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
                 ? (agentId) => navigation.openAgent({ agentId })
                 : undefined
             }
+            primary={primary}
             nodeWidth={260}
             nodeHeight={44}
             columnGap={48}
@@ -379,7 +432,7 @@ function TreeRow({ tree, open, onToggle, navigation, theme, t }: TreeRowProps) {
                 <View style={styles.numbers}>
                   <Text style={styles.cost}>{usd(member.costUsd)}</Text>
                   <Text style={styles.tokens}>
-                    {short(member.tokens)} tokens
+                    {t("unit.tokens", { value: short(member.tokens) })}
                   </Text>
                 </View>
               </Pressable>

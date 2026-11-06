@@ -1,412 +1,65 @@
+import {
+  defineTranslations,
+  useTranslation,
+  type PluginMessage,
+} from "@getpaseo/plugin/client";
 import { useMemo } from "react";
-import { interpolate } from "./format";
-import { hostLanguage } from "./web";
+import { resolveLanguage, type Language } from "./locale";
+import { en, nest, zh, type MessageKey, type MessageParams } from "./messages";
 
-export type Language = "zh" | "en";
+export type { Language } from "./locale";
+export type { MessageKey, MessageParams } from "./messages";
 
-const zh = {
-  "app.title": "用量统计",
-  "app.open": "打开用量统计",
-  "app.settings": "用量统计设置",
-  "range.24h": "近 24 小时",
-  "range.7d": "近 7 天",
-  "range.30d": "近 30 天",
-  "range.90d": "近 90 天",
-  "range.all": "全部",
-  "range.custom": "自定义",
-  "custom.from": "开始",
-  "custom.to": "结束",
-  "custom.apply": "应用",
-  "custom.invalid": "请按 YYYY-MM-DD HH:mm 填写，且开始时间早于结束时间",
-  "filter.provider": "客户端",
-  "filter.model": "模型",
-  "filter.project": "项目",
-  "filter.all": "全部",
-  "filter.count": "{count} 项",
-  "filter.search": "搜索{label}",
-  "filter.empty": "没有匹配项",
-  "filter.clear": "清除",
-  "filter.done": "完成",
-  "filter.reset": "重置筛选",
-  "status.refresh": "刷新",
-  "status.syncing": "正在同步日志…",
-  "status.updated": "更新于 {time}",
-  "status.loading": "正在加载用量数据…",
-  "status.error": "加载失败：{error}",
-  "status.retry": "重试",
-  "kpi.cost": "费用（USD）",
-  "kpi.costEstimate": "按公开价格估算",
-  "kpi.unpriced": "{tokens} tokens 未定价",
-  "kpi.tokens": "Tokens 总量",
-  "kpi.tokensDetail": "输入 {input} · 输出 {output}",
-  "kpi.cache": "缓存",
-  "kpi.cacheDetail": "读 {read} · 写 {write}",
-  "kpi.requests": "请求数",
-  "kpi.agents": "Agent",
-  "kpi.agentsDetail": "有用量的 agent",
-  "tab.provider": "按客户端",
-  "tab.model": "按模型",
-  "tab.project": "按项目",
-  "sort.cost": "按费用",
-  "sort.tokens": "按 Tokens",
-  "col.name": "名称",
-  "col.input": "输入",
-  "col.output": "输出",
-  "col.cacheRead": "缓存读",
-  "col.cacheWrite": "缓存写",
-  "col.total": "总计",
-  "col.cost": "费用",
-  "col.share": "占比",
-  "table.empty": "所选范围内没有用量数据",
-  "table.hint": "点击一行即可按它筛选",
-  "table.rowDetail": "输入 {input} · 输出 {output} · 缓存 {cache}",
-  "table.agents": "{count} 个 agent",
-  noProject: "未关联项目",
-  "collab.title": "多 Agent 协作",
-  "collab.subtitle":
-    "按 Paseo 父子 agent 关系统计，provider 内置子代理（Codex 子线程、Claude 子代理）单独计数",
-  "collab.trees": "协作任务",
-  "collab.treesDetail": "{agents} 个 agent 参与",
-  "collab.children": "子 Agent",
-  "collab.childrenDetail": "{orchestrators} 个编排者",
-  "collab.fanout": "平均扇出",
-  "collab.fanoutDetail": "最多 {max} 个子 agent",
-  "collab.depth": "最大层级",
-  "collab.childShare": "子 Agent 费用占比",
-  "collab.native": "内置子代理会话",
-  "collab.spend": "{cost} · {tokens} tokens",
-  "collab.pairs": "协作组合",
-  "collab.pairsBy.model": "按模型",
-  "collab.pairsBy.provider": "按客户端",
-  "collab.pairsHint.model":
-    "父 agent → 子 agent 按各自主模型归类，金额为子 agent 的花费",
-  "collab.pairsHint.provider":
-    "父 agent → 子 agent 按客户端归类，金额为子 agent 的花费",
-  "collab.unknownModel": "未知模型",
-  "collab.showAll": "显示全部 {count} 项",
-  "collab.showLess": "收起",
-  "collab.models": "模型分工",
-  "collab.modelsHint":
-    "各模型在协作中的花费：编排 = 派出过子 agent 的 agent，委派 = 以该模型为主模型的编排者派出的子 agent 及其花费。点击一行按该模型筛选",
-  "collab.modelsEmpty": "所选范围内没有协作用量",
-  "collab.col.model": "模型",
-  "collab.col.orchestrator": "编排",
-  "collab.col.child": "子 Agent",
-  "collab.col.native": "内置子代理",
-  "collab.col.delegated": "委派",
-  "collab.col.share": "协作占比",
-  "collab.roleAgents": "{tokens} · {count} 个",
-  "collab.roleSessions": "{tokens} · {count} 个会话",
-  "collab.delegatedValue": "{count} 个子 agent",
-  "collab.delegatedDetail": "{cost} · 扇出 {fanout}",
-  "collab.compactRoles":
-    "编排 {orchestrator} · 子 Agent {child} · 内置 {native}",
-  "collab.compactDelegated": "委派 {count} 个子 agent · {cost}",
-  "collab.treeModels": "模型：{models}",
-  "collab.topology": "协作拓扑",
-  "collab.topologyHint":
-    "节点为同一层级里使用同一模型（或客户端）的 agent，连线粗细表示派出的子 agent 数量，虚线框为内置子代理（按会话计），底部色条表示花费。点击节点查看上下游",
-  "collab.layer": "第 {depth} 层",
-  "collab.nodeAgents": "{count} 个 agent · {cost}",
-  "collab.nodeSessions": "{count} 个会话 · {cost}",
-  "collab.nativeNode": "{name}（内置）",
-  "collab.detailIn": "上游",
-  "collab.detailOut": "下游",
-  "collab.detailEdge": "{name} ×{count} · {cost}",
-  "collab.view.list": "列表",
-  "collab.view.graph": "拓扑",
-  "collab.openHint": "点击节点打开对应 agent",
-  "collab.pairCount": "×{count}",
-  "collab.topTrees": "协作任务排行",
-  "collab.treeMeta": "{agents} 个 agent · {depth} 层 · {providers}",
-  "collab.memberNative": "内置子代理 {count}",
-  "collab.empty": "所选范围内没有多 agent 协作",
-  "collab.expand": "展开 {title}",
-  "collab.openAgent": "打开 agent {title}",
-  "coverage.title": "数据说明",
-  "coverage.logs": "{found}/{total} 个 agent 找到用量日志",
-  "coverage.not_found":
-    "{provider}：{count} 个 agent 的本地日志已不存在（可能已被清理）",
-  "coverage.unsupported": "{provider}：{count} 个 agent 暂不支持读取用量",
-  "coverage.unpriced":
-    "未定价模型（费用按 0 计，可在设置中填写单价）：{models}",
-  "coverage.pricing.online": "价格来源：LiteLLM 公开价格，{time} 更新",
-  "coverage.pricing.cache": "价格来源：LiteLLM 价格缓存，{time} 更新",
-  "coverage.pricing.none": "暂无公开价格数据",
-  "coverage.pricing.disabled": "已关闭在线价格，仅使用缓存和自定义单价",
-  "coverage.pricingError": "（获取失败：{error}）",
-  "coverage.estimate":
-    "费用为估算值：日志自带费用时（Pi、omp）直接采用，否则按自定义单价或公开价格计算。",
-  "coverage.ledger": "账本：{events} 条记录，保存在 {dir}",
-  "coverage.syncError": "同步失败：{error}",
-  "settings.pricing": "价格",
-  "settings.online": "在线获取公开价格",
-  "settings.onlineHint":
-    "每天从 GitHub 下载一次 LiteLLM 价格表，不会上传任何数据",
-  "settings.overrides": "自定义单价",
-  "settings.overridesInfo":
-    "单位为 USD / 百万 tokens，优先于公开价格。模型名不区分大小写，缓存价格可留空（按输入价计）。",
-  "settings.model": "模型",
-  "settings.input": "输入",
-  "settings.output": "输出",
-  "settings.cacheRead": "缓存读",
-  "settings.cacheWrite": "缓存写",
-  "settings.add": "添加单价",
-  "settings.remove": "删除",
-  "settings.save": "保存",
-  "settings.saving": "保存中…",
-  "settings.saved": "已保存",
-  "settings.invalid": "第 {row} 行：请填写模型名，价格须为非负数字",
-  "settings.loading": "正在读取设置…",
-  "settings.loadError": "读取设置失败：{error}",
-  "settings.empty": "暂无自定义单价",
-  "settings.reset": "恢复默认",
-  "update.section": "版本与更新",
-  "update.current": "当前版本",
-  "update.latest": "最新版本",
-  "update.none": "暂无发布版本",
-  "update.check": "检查更新",
-  "update.checking": "检查中…",
-  "update.upToDate": "已是最新",
-  "update.checkedAt": "{time} 检查",
-  "update.available": "新版本 {version} 可用",
-  "update.availableDetail":
-    "当前 {current}，更新后插件会自动重新加载，无需重启 Paseo",
-  "update.apply": "立即更新",
-  "update.applying": "正在更新，插件将自动重新加载…",
-  "update.applyFailed": "更新失败：{error}",
-  "update.notes": "更新说明",
-  "update.auto": "自动更新",
-  "update.autoHint": "每 6 小时检查一次 GitHub Release，有新版本时自动更新",
-  "update.blocked.registry":
-    "当前从 Paseo 插件市场安装，版本由市场审核固定。请在 设置 → 插件 中更新，或等待市场发布新版本",
-  "update.blocked.directory":
-    "当前从本地目录安装，请在源码目录 git pull 后执行 paseo plugin reload",
-  "update.blocked.not_installed": "未在插件列表中找到本插件，无法自动更新",
-  "update.blocked.no_cli":
-    "找不到 paseo 命令行，请在守护进程环境里设置 PASEO_CLI 指向它",
-  "update.error": "检查失败：{error}",
+type Template<Key extends MessageKey> = Key extends keyof typeof en
+  ? (typeof en)[Key]
+  : `${Key}_other` extends keyof typeof en
+    ? (typeof en)[`${Key}_other`]
+    : never;
+
+type Names<Text> = Text extends `${string}{{${infer Name}}}${infer Rest}`
+  ? Name | Names<Rest>
+  : never;
+
+// Placeholders the key's English text needs, so a missing one is a type
+// error rather than a runtime throw from the host.
+type ParamsOf<Key extends MessageKey> = [Names<Template<Key>>] extends [never]
+  ? MessageParams | undefined
+  : Record<Names<Template<Key>>, string | number> & MessageParams;
+
+// Keys whose text has no placeholders, for lookups through a variable.
+export type PlainKey = {
+  [Key in MessageKey]: [Names<Template<Key>>] extends [never] ? Key : never;
+}[MessageKey];
+
+export type Translate = <Key extends MessageKey>(
+  key: Key,
+  ...params: [Names<Template<Key>>] extends [never]
+    ? [params?: MessageParams]
+    : [params: ParamsOf<Key>]
+) => string;
+
+type Messages = {
+  message(key: MessageKey, params?: MessageParams): PluginMessage;
 };
 
-type Messages = Record<keyof typeof zh, string>;
+const translations = defineTranslations({
+  resources: { en: nest(en), "zh-CN": nest(zh) },
+});
 
-const en: Messages = {
-  "app.title": "Usage stats",
-  "app.open": "Open usage stats",
-  "app.settings": "Usage stats settings",
-  "range.24h": "Last 24 hours",
-  "range.7d": "Last 7 days",
-  "range.30d": "Last 30 days",
-  "range.90d": "Last 90 days",
-  "range.all": "All time",
-  "range.custom": "Custom",
-  "custom.from": "From",
-  "custom.to": "To",
-  "custom.apply": "Apply",
-  "custom.invalid": "Use YYYY-MM-DD HH:mm, with the start before the end",
-  "filter.provider": "Provider",
-  "filter.model": "Model",
-  "filter.project": "Project",
-  "filter.all": "All",
-  "filter.count": "{count} selected",
-  "filter.search": "Search {label}",
-  "filter.empty": "No matches",
-  "filter.clear": "Clear",
-  "filter.done": "Done",
-  "filter.reset": "Reset filters",
-  "status.refresh": "Refresh",
-  "status.syncing": "Syncing logs…",
-  "status.updated": "Updated {time}",
-  "status.loading": "Loading usage…",
-  "status.error": "Failed to load: {error}",
-  "status.retry": "Retry",
-  "kpi.cost": "Cost (USD)",
-  "kpi.costEstimate": "Estimated from public prices",
-  "kpi.unpriced": "{tokens} tokens unpriced",
-  "kpi.tokens": "Total tokens",
-  "kpi.tokensDetail": "In {input} · Out {output}",
-  "kpi.cache": "Cache",
-  "kpi.cacheDetail": "Read {read} · Write {write}",
-  "kpi.requests": "Requests",
-  "kpi.agents": "Agents",
-  "kpi.agentsDetail": "Agents with usage",
-  "tab.provider": "By provider",
-  "tab.model": "By model",
-  "tab.project": "By project",
-  "sort.cost": "By cost",
-  "sort.tokens": "By tokens",
-  "col.name": "Name",
-  "col.input": "Input",
-  "col.output": "Output",
-  "col.cacheRead": "Cache read",
-  "col.cacheWrite": "Cache write",
-  "col.total": "Total",
-  "col.cost": "Cost",
-  "col.share": "Share",
-  "table.empty": "No usage in this range",
-  "table.hint": "Tap a row to filter by it",
-  "table.rowDetail": "In {input} · Out {output} · Cache {cache}",
-  "table.agents": "{count} {count|agent|agents}",
-  noProject: "No project",
-  "collab.title": "Multi-agent collaboration",
-  "collab.subtitle":
-    "Built from Paseo parent and child agents. Provider subagents (Codex threads, Claude subagents) are counted separately.",
-  "collab.trees": "Collaborations",
-  "collab.treesDetail": "{agents} {agents|agent|agents} involved",
-  "collab.children": "Child agents",
-  "collab.childrenDetail":
-    "{orchestrators} {orchestrators|orchestrator|orchestrators}",
-  "collab.fanout": "Average fan-out",
-  "collab.fanoutDetail": "Up to {max} {max|child|children}",
-  "collab.depth": "Max depth",
-  "collab.childShare": "Child agent cost share",
-  "collab.native": "Provider subagent sessions",
-  "collab.spend": "{cost} · {tokens} tokens",
-  "collab.pairs": "Collaboration pairs",
-  "collab.pairsBy.model": "By model",
-  "collab.pairsBy.provider": "By provider",
-  "collab.pairsHint.model":
-    "Parent → child agents grouped by each one's main model; amounts are the children's spend",
-  "collab.pairsHint.provider":
-    "Parent → child agents grouped by provider; amounts are the children's spend",
-  "collab.unknownModel": "Unknown model",
-  "collab.showAll": "Show all {count}",
-  "collab.showLess": "Show less",
-  "collab.models": "Models",
-  "collab.modelsHint":
-    "Spend per model by role. Orchestrators launched child agents; delegated counts the children launched by orchestrators mainly using the model, and their spend. Tap a row to filter by the model.",
-  "collab.modelsEmpty": "No collaborative usage in this range",
-  "collab.col.model": "Model",
-  "collab.col.orchestrator": "Orchestrator",
-  "collab.col.child": "Child agent",
-  "collab.col.native": "Subagents",
-  "collab.col.delegated": "Delegated",
-  "collab.col.share": "Collaborative",
-  "collab.roleAgents": "{tokens} · {count} {count|agent|agents}",
-  "collab.roleSessions": "{tokens} · {count} {count|session|sessions}",
-  "collab.delegatedValue": "{count} {count|child|children}",
-  "collab.delegatedDetail": "{cost} · fan-out {fanout}",
-  "collab.compactRoles":
-    "Orchestrator {orchestrator} · Child {child} · Subagents {native}",
-  "collab.compactDelegated":
-    "Delegated {count} {count|child|children} · {cost}",
-  "collab.treeModels": "Models: {models}",
-  "collab.topology": "Collaboration topology",
-  "collab.topologyHint":
-    "Each node groups agents at one level that use the same model (or provider). Thicker lines mean more child agents; dashed nodes are provider subagents, counted in sessions; the bar under a node shows its spend. Tap a node to see what it connects to.",
-  "collab.layer": "Level {depth}",
-  "collab.nodeAgents": "{count} {count|agent|agents} · {cost}",
-  "collab.nodeSessions": "{count} {count|session|sessions} · {cost}",
-  "collab.nativeNode": "{name} (subagent)",
-  "collab.detailIn": "From",
-  "collab.detailOut": "To",
-  "collab.detailEdge": "{name} ×{count} · {cost}",
-  "collab.view.list": "List",
-  "collab.view.graph": "Topology",
-  "collab.openHint": "Tap a node to open the agent",
-  "collab.pairCount": "×{count}",
-  "collab.topTrees": "Top collaborations",
-  "collab.treeMeta":
-    "{agents} {agents|agent|agents} · depth {depth} · {providers}",
-  "collab.memberNative": "{count} {count|subagent|subagents}",
-  "collab.empty": "No multi-agent collaboration in this range",
-  "collab.expand": "Expand {title}",
-  "collab.openAgent": "Open agent {title}",
-  "coverage.title": "About this data",
-  "coverage.logs": "Usage logs found for {found} of {total} agents",
-  "coverage.not_found":
-    "{provider}: local logs for {count} {count|agent|agents} are gone (likely cleaned up)",
-  "coverage.unsupported":
-    "{provider}: usage for {count} {count|agent|agents} is not supported yet",
-  "coverage.unpriced":
-    "Unpriced models (counted as $0, set a price in settings): {models}",
-  "coverage.pricing.online":
-    "Prices: LiteLLM public price list, updated {time}",
-  "coverage.pricing.cache": "Prices: cached LiteLLM price list, updated {time}",
-  "coverage.pricing.none": "No public price list available",
-  "coverage.pricing.disabled":
-    "Online prices are off; using the cache and custom prices",
-  "coverage.pricingError": " (fetch failed: {error})",
-  "coverage.estimate":
-    "Costs are estimates: costs recorded in logs (Pi, omp) are used as is, otherwise custom or public prices apply.",
-  "coverage.ledger": "Ledger: {events} records in {dir}",
-  "coverage.syncError": "Sync failed: {error}",
-  "settings.pricing": "Pricing",
-  "settings.online": "Fetch public prices",
-  "settings.onlineHint":
-    "Downloads the LiteLLM price list from GitHub once a day. Nothing is uploaded.",
-  "settings.overrides": "Custom prices",
-  "settings.overridesInfo":
-    "USD per million tokens, used before public prices. Model names ignore case; empty cache prices fall back to the input price.",
-  "settings.model": "Model",
-  "settings.input": "Input",
-  "settings.output": "Output",
-  "settings.cacheRead": "Cache read",
-  "settings.cacheWrite": "Cache write",
-  "settings.add": "Add price",
-  "settings.remove": "Remove",
-  "settings.save": "Save",
-  "settings.saving": "Saving…",
-  "settings.saved": "Saved",
-  "settings.invalid": "Row {row}: enter a model and non-negative prices",
-  "settings.loading": "Loading settings…",
-  "settings.loadError": "Failed to load settings: {error}",
-  "settings.empty": "No custom prices",
-  "settings.reset": "Reset",
-  "update.section": "Version and updates",
-  "update.current": "Current version",
-  "update.latest": "Latest version",
-  "update.none": "No releases yet",
-  "update.check": "Check for updates",
-  "update.checking": "Checking…",
-  "update.upToDate": "Up to date",
-  "update.checkedAt": "Checked {time}",
-  "update.available": "Version {version} is available",
-  "update.availableDetail":
-    "You have {current}. The plugin reloads after updating; Paseo keeps running.",
-  "update.apply": "Update now",
-  "update.applying": "Updating; the plugin will reload…",
-  "update.applyFailed": "Update failed: {error}",
-  "update.notes": "Release notes",
-  "update.auto": "Update automatically",
-  "update.autoHint":
-    "Checks GitHub releases every 6 hours and installs new versions",
-  "update.blocked.registry":
-    "Installed from the Paseo plugin registry, which pins reviewed versions. Update it under Settings → Plugins, or wait for the registry to publish a new version.",
-  "update.blocked.directory":
-    "Installed from a local directory. Run git pull there, then paseo plugin reload.",
-  "update.blocked.not_installed":
-    "This plugin is not in the plugin list, so it cannot update itself",
-  "update.blocked.no_cli":
-    "The paseo CLI was not found. Set PASEO_CLI in the daemon environment.",
-  "update.error": "Check failed: {error}",
-};
-
-export type MessageKey = keyof typeof zh;
-export type MessageParams = Record<string, string | number>;
-export type Translate = (key: MessageKey, params?: MessageParams) => string;
-
-const MESSAGES: Record<Language, Messages> = { zh, en };
-
-export function detectLanguage(): Language {
-  const tag =
-    hostLanguage() ?? Intl.DateTimeFormat().resolvedOptions().locale ?? "en";
-  return tag.toLowerCase().startsWith("zh") ? "zh" : "en";
-}
-
-export function translate(
-  language: Language,
-  key: MessageKey,
-  params?: MessageParams,
-): string {
-  const template = MESSAGES[language][key];
-  return params ? interpolate(template, params) : template;
-}
+// Persistent labels the host resolves in the app's current language.
+export const messages = translations as unknown as Messages;
 
 export function useI18n(): { language: Language; t: Translate } {
-  const language = useMemo(detectLanguage, []);
+  const { locale, t } = useTranslation(translations) as unknown as {
+    locale: string;
+    t(key: string, params?: MessageParams): string;
+  };
   return useMemo(
-    () => ({ language, t: (key, params) => translate(language, key, params) }),
-    [language],
+    () => ({
+      language: resolveLanguage([locale]),
+      t: ((key: MessageKey, params?: MessageParams) =>
+        t(key, params)) as Translate,
+    }),
+    [locale, t],
   );
 }

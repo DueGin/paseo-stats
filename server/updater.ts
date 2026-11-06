@@ -5,6 +5,12 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import type { ChildProcess } from "node:child_process";
 import { execCommand, spawnProcess } from "@getpaseo/plugin/server";
+import {
+  ERRORS,
+  exitError,
+  httpError,
+  noUpdateError,
+} from "../shared/errors.ts";
 import type { UpdateStatus } from "../shared/update.ts";
 import {
   PLUGIN_ID,
@@ -222,7 +228,7 @@ export class Updater {
     const status = await this.check(false);
     if (this.child) return this.snapshot();
     if (!status.updateAvailable || status.latestTag !== tag) {
-      throw new Error(`No update to ${tag} is available`);
+      throw new Error(noUpdateError(tag));
     }
     const cli = this.cli();
     const installation = await this.installation(cli);
@@ -232,7 +238,7 @@ export class Updater {
       installation.kind === "directory" ||
       installation.kind === "registry"
     ) {
-      throw new Error("This installation cannot update itself");
+      throw new Error(ERRORS.cannotUpdate);
     }
     const target =
       installation.kind === "npm"
@@ -255,7 +261,7 @@ export class Updater {
       if (code === 0) this.finishApply(null);
       else
         void this.logTail().then((tail) =>
-          this.finishApply(tail || `exit ${code}`),
+          this.finishApply(tail || exitError(code)),
         );
     });
     child.unref();
@@ -353,13 +359,13 @@ export class Updater {
       ),
       new Promise<never>((_, reject) => {
         timer = setTimeout(
-          () => reject(new Error("GitHub request timed out")),
+          () => reject(new Error(ERRORS.githubTimeout)),
           FETCH_TIMEOUT_MS,
         );
       }),
     ]).finally(() => clearTimeout(timer));
     if (response.status === 404) return null;
-    if (!response.ok) throw new Error(`GitHub HTTP ${response.status}`);
+    if (!response.ok) throw new Error(httpError(response.status, "GitHub"));
     const body = record(await response.json()) ?? {};
     const tag = typeof body.tag_name === "string" ? body.tag_name : null;
     if (!tag || !parseVersion(tag)) return null;

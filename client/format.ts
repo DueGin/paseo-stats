@@ -1,4 +1,5 @@
-import type { Language } from "./i18n";
+import type { TimelineUnit } from "../shared/stats.ts";
+import { localeTag, type Language } from "./locale.ts";
 
 function trimFixed(value: number, digits: number): string {
   const text = value.toFixed(digits);
@@ -42,7 +43,7 @@ function pad(value: number): string {
 }
 
 export function dateTime(ms: number, language: Language): string {
-  return new Date(ms).toLocaleString(language === "zh" ? "zh-CN" : "en-US", {
+  return new Date(ms).toLocaleString(localeTag(language), {
     month: "short",
     day: "numeric",
     hour: "2-digit",
@@ -67,19 +68,75 @@ export function parseInputValue(text: string): number | null {
   return date.getTime();
 }
 
-// Fills {name} placeholders. {name|one|other} picks a word by whether the
-// named number is exactly 1, for languages that pluralise.
-export function interpolate(
-  template: string,
-  params: Record<string, string | number>,
+// Short money for chart axes: $0, $0.25, $12.5, $150, $1.5K. Axis midpoints
+// are halves of round numbers, so keep the digit that makes them exact.
+export function usdCompact(value: number): string {
+  if (value === 0) return "$0";
+  const abs = Math.abs(value);
+  if (abs >= 1000) return "$" + compact(value);
+  return "$" + trimFixed(value, abs >= 100 ? 0 : abs >= 10 ? 1 : 2);
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function format(
+  ms: number,
+  language: Language,
+  options: Intl.DateTimeFormatOptions,
+) {
+  return new Date(ms).toLocaleString(localeTag(language), options);
+}
+
+// Axis label for a bucket. Hour labels add the date when it changes from the
+// previous label.
+export function bucketLabel(
+  start: number,
+  unit: TimelineUnit,
+  language: Language,
+  previous: number | null,
 ): string {
-  return template
-    .replace(
-      /\{(\w+)\|([^|}]*)\|([^}]*)\}/g,
-      (match, name: string, one, other) =>
-        name in params ? (Number(params[name]) === 1 ? one : other) : match,
-    )
-    .replace(/\{(\w+)\}/g, (match, name: string) =>
-      name in params ? String(params[name]) : match,
-    );
+  if (unit !== "hour")
+    return format(start, language, { month: "numeric", day: "numeric" });
+  const time = format(start, language, {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+  const sameDay =
+    previous !== null &&
+    new Date(previous).toDateString() === new Date(start).toDateString();
+  return sameDay
+    ? time
+    : `${format(start, language, { month: "numeric", day: "numeric" })} ${time}`;
+}
+
+// The period a bucket covers, for its detail line.
+export function bucketRange(
+  start: number,
+  unit: TimelineUnit,
+  language: Language,
+): string {
+  if (unit === "hour") {
+    const day = format(start, language, {
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+    });
+    const hour = (ms: number) =>
+      format(ms, language, {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+    return `${day} ${hour(start)}–${hour(start + 60 * 60 * 1000)}`;
+  }
+  const day = (ms: number) =>
+    format(ms, language, { month: "short", day: "numeric" });
+  if (unit === "day")
+    return format(start, language, {
+      month: "short",
+      day: "numeric",
+      weekday: "short",
+    });
+  return `${day(start)} – ${day(start + 6 * DAY_MS)}`;
 }

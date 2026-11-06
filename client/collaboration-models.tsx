@@ -1,10 +1,10 @@
 import type { PluginTheme } from "@getpaseo/plugin";
-import { Icon } from "@getpaseo/plugin/client/react-native";
+import { Icon } from "@getpaseo/plugin/client/ui";
 import { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { CollaborationPair, ModelRole } from "../shared/stats";
 import { compact as short, percent, usd } from "./format";
-import type { MessageKey, Translate } from "./i18n";
+import type { PlainKey, Translate } from "./i18n";
 import { ShareBar, TABULAR } from "./ui";
 
 const PAIR_LIMIT = 8;
@@ -121,7 +121,7 @@ export function ModelRoles({
           "collab.col.child",
           "collab.col.native",
           "collab.col.delegated",
-        ] as MessageKey[]
+        ] as PlainKey[]
       ).map((key) => (
         <Text
           key={key}
@@ -370,7 +370,9 @@ export function PairList({
             </View>
             <View style={styles.numbers}>
               <Text style={cell.value}>{usd(pair.costUsd)}</Text>
-              <Text style={cell.detail}>{short(pair.tokens)} tokens</Text>
+              <Text style={cell.detail}>
+                {t("unit.tokens", { value: short(pair.tokens) })}
+              </Text>
             </View>
           </View>
         ))}

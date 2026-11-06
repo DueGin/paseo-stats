@@ -2,10 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   compact,
-  interpolate,
   parseInputValue,
   percent,
   toInputValue,
+  usdCompact,
   usd,
 } from "../client/format.ts";
 import { presetRange } from "../client/time-range.ts";
@@ -48,16 +48,12 @@ test("presets end now and default to the last 24 hours", () => {
   assert.deepEqual(presetRange("all", now), { from: 0, to: now });
 });
 
-test("interpolate fills placeholders and picks plural words", () => {
-  const template = "{count} {count|agent|agents} · {cost}";
-  assert.equal(interpolate(template, { count: 1, cost: "$1" }), "1 agent · $1");
-  assert.equal(
-    interpolate(template, { count: 3, cost: "$1" }),
-    "3 agents · $1",
-  );
-  assert.equal(
-    interpolate(template, { count: 0, cost: "$0" }),
-    "0 agents · $0",
-  );
-  assert.equal(interpolate("{missing} {x|a|b}", {}), "{missing} {x|a|b}");
+test("axis money keeps the digits a midpoint needs", () => {
+  assert.equal(usdCompact(0), "$0");
+  assert.equal(usdCompact(25), "$25");
+  assert.equal(usdCompact(12.5), "$12.5");
+  assert.equal(usdCompact(7.5), "$7.5");
+  assert.equal(usdCompact(0.75), "$0.75");
+  assert.equal(usdCompact(150), "$150");
+  assert.equal(usdCompact(1250), "$1.25K");
 });

@@ -404,3 +404,25 @@ test("tree members record the member that launched them", () => {
     ],
   );
 });
+
+test("timeline buckets add up to the page totals under filters", () => {
+  const sum = (values) => values.reduce((a, b) => a + b, 0);
+  for (const query of [{}, { providers: ["codex"] }, { models: ["kimi-k3"] }]) {
+    const result = run(query);
+    const { timeline, totals } = result;
+    assert.equal(sum(timeline.tokens), totals.total);
+    assert.equal(sum(timeline.requests), totals.requests);
+    assert.ok(Math.abs(sum(timeline.costUsd) - totals.costUsd) < 1e-9);
+    const stacked = timeline.byProvider.reduce(
+      (all, series) => all + sum(series.tokens),
+      0,
+    );
+    assert.equal(stacked, totals.total);
+  }
+  const { timeline } = run();
+  assert.deepEqual(timeline.byProvider.map((series) => series.label).sort(), [
+    "Claude",
+    "Codex",
+    "Pi",
+  ]);
+});

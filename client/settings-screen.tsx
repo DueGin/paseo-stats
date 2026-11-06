@@ -1,5 +1,5 @@
 import { useSettings, type PluginSurfaceProps } from "@getpaseo/plugin/client";
-import { Icon, TextInput } from "@getpaseo/plugin/client/react-native";
+import { Icon, TextInput } from "@getpaseo/plugin/client/ui";
 import {
   SettingsAction,
   SettingsCard,
@@ -9,7 +9,7 @@ import {
 import { useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { statsSettings, type PriceOverride } from "../shared/settings";
-import { useI18n, type MessageKey, type Translate } from "./i18n";
+import { useI18n, type PlainKey, type Translate } from "./i18n";
 import { UpdateSection } from "./update";
 
 interface DraftRow {
@@ -23,7 +23,7 @@ interface DraftRow {
 
 const PRICE_FIELDS: {
   key: Exclude<keyof DraftRow, "id" | "model">;
-  label: MessageKey;
+  label: PlainKey;
 }[] = [
   { key: "input", label: "settings.input" },
   { key: "output", label: "settings.output" },

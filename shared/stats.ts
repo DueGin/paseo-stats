@@ -135,6 +135,29 @@ export const CollaborationSchema = z.object({
 });
 export type Collaboration = z.infer<typeof CollaborationSchema>;
 
+// One series of a stacked timeline. A null key folds the smaller series.
+export const TimelineSeriesSchema = z.object({
+  key: z.string().nullable(),
+  label: z.string(),
+  costUsd: z.array(z.number()),
+  tokens: z.array(z.number()),
+});
+export type TimelineSeries = z.infer<typeof TimelineSeriesSchema>;
+
+// Usage in consecutive buckets that start at `starts` (ms). Arrays are
+// parallel to `starts`; empty buckets are zero.
+export const TimelineSchema = z.object({
+  unit: z.enum(["hour", "day", "week"]),
+  starts: z.array(z.number()),
+  costUsd: z.array(z.number()),
+  tokens: z.array(z.number()),
+  requests: z.array(z.number()),
+  byProvider: z.array(TimelineSeriesSchema),
+  byModel: z.array(TimelineSeriesSchema),
+});
+export type Timeline = z.infer<typeof TimelineSchema>;
+export type TimelineUnit = Timeline["unit"];
+
 export const PricingStatusSchema = z.object({
   source: z.enum(["online", "cache", "none", "disabled"]),
   updatedAt: z.number().nullable(),
@@ -169,6 +192,9 @@ export const StatsQuerySchema = z.object({
   models: z.array(z.string()),
   projects: z.array(z.string()),
   refresh: z.boolean().optional(),
+  // The client's UTC offset in minutes east of UTC, so day buckets follow the
+  // reader's midnight.
+  tzOffset: z.number().optional(),
 });
 export type StatsQuery = z.infer<typeof StatsQuerySchema>;
 
@@ -183,6 +209,7 @@ export const StatsResultSchema = z.object({
     models: z.array(OptionSchema),
     projects: z.array(OptionSchema),
   }),
+  timeline: TimelineSchema,
   collaboration: CollaborationSchema,
   coverage: CoverageSchema,
 });

@@ -1,6 +1,7 @@
 /// <reference types="node" />
 import { readFile, rename, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { ERRORS, httpError, timeoutError } from "../shared/errors.ts";
 import type { PriceOverride } from "../shared/settings.ts";
 import type { PricingStatus } from "../shared/stats.ts";
 import type { UsageEvent } from "./types.ts";
@@ -198,10 +199,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return Promise.race([
     promise,
     new Promise<never>((_, reject) => {
-      timer = setTimeout(
-        () => reject(new Error(`timed out after ${ms}ms`)),
-        ms,
-      );
+      timer = setTimeout(() => reject(new Error(timeoutError(ms))), ms);
     }),
   ]).finally(() => clearTimeout(timer));
 }
@@ -276,12 +274,12 @@ export class PricingSource {
     try {
       const table = await withTimeout(
         this.fetchImpl(LITELLM_PRICES_URL).then(async (response) => {
-          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          if (!response.ok) throw new Error(httpError(response.status));
           return trimLiteLLM(await response.json());
         }),
         FETCH_TIMEOUT_MS,
       );
-      if (Object.keys(table).length === 0) throw new Error("empty price list");
+      if (Object.keys(table).length === 0) throw new Error(ERRORS.emptyPrices);
       this.table = table;
       this.fetchedAt = Date.now();
       this.fetchedOnline = true;

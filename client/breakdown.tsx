@@ -3,25 +3,25 @@ import { useMemo } from "react";
 import { Pressable, Text, View } from "react-native";
 import { NO_PROJECT_KEY, type GroupRow } from "../shared/stats";
 import { compact as short, percent, usd } from "./format";
-import type { MessageKey, Translate } from "./i18n";
+import type { PlainKey, Translate } from "./i18n";
 import { ShareBar, TABULAR, cardStyle } from "./ui";
 
 export type Dimension = "provider" | "model" | "project";
 export type SortKey = "cost" | "tokens";
 
-const DIMENSIONS: { id: Dimension; label: MessageKey }[] = [
+const DIMENSIONS: { id: Dimension; label: PlainKey }[] = [
   { id: "provider", label: "tab.provider" },
   { id: "model", label: "tab.model" },
   { id: "project", label: "tab.project" },
 ];
 
-const SORTS: { id: SortKey; label: MessageKey }[] = [
+const SORTS: { id: SortKey; label: PlainKey }[] = [
   { id: "cost", label: "sort.cost" },
   { id: "tokens", label: "sort.tokens" },
 ];
 
 const NUMERIC_COLUMNS: {
-  label: MessageKey;
+  label: PlainKey;
   value: (row: GroupRow) => string;
 }[] = [
   { label: "col.input", value: (row) => short(row.input) },

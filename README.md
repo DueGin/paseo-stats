@@ -10,10 +10,13 @@ A [Paseo](https://paseo.sh) plugin that reports token usage and USD cost of your
 
 - **Three breakdowns**: input, output, cache read, cache write, total tokens, cost and share by provider, model or project. Sort by cost or tokens; tap a row to filter by it.
 - **Time ranges**: last 24 hours (default), 7, 30 or 90 days, all time, or a custom range.
+- **Usage over time**: hourly, daily or weekly bars of cost or tokens, stacked by provider or model in your local time zone. Tap a bar for its breakdown and zoom the page to that period.
 - **Filters**: searchable multi-select dropdowns for providers, models and projects that scope the whole screen.
 - **Multi-agent collaboration**: collaborations, child agents, average and maximum fan-out, depth, child agent cost share, provider pairs such as Claude to Codex, and the top collaborations with their members. Provider-native subagents (Codex threads, Claude subagents) are counted separately.
 - **Collaboration by model**: each model's spend as orchestrator, child agent and provider subagent, its collaborative share, what orchestrators on that model delegated (children, spend, fan-out), and parent → child pairs by model or provider, such as `claude-opus-5-5 → gpt-6.1-sol ×93`. Tap a model to filter the page by it.
-- **Topology graphs**: a layered graph of how agents launch each other, grouped by model or provider per level, with line thickness for the number of children and dashed nodes for provider subagents; tap a node to highlight and list its links. Each collaboration in the ranking also has an agent-level topology view; tap a node to open that agent.
+- **Topology graphs**: a layered graph of how agents launch each other, grouped by model or provider per level, with line thickness for the number of children and dashed nodes for provider subagents. Only the costliest path is drawn in the accent colour. Point at a node to trace its links; tap it for its spend share, how far it reaches upstream and downstream, and a link to filter the page by it. Highlight the costliest path or provider subagents, and wide levels fold their long tail into "Other". Each collaboration in the ranking also has an agent-level topology view; tap a node to open that agent.
+- **Export**: copy a Markdown report, a CSV of every breakdown row, the topology as a Mermaid flowchart, or [SeeCode](https://github.com/Aryanutkarsh/SeeCode) specs of the topology and the spend trend, which an agent with SeeCode renders as animated, explorable diagrams.
+- **Languages**: English and Simplified Chinese, following the language set in Paseo, including on iOS and Android. Other languages show English.
 - **Hot updates**: new GitHub releases show up in the app with a one-click update, or update automatically. Paseo keeps running.
 
 ## Screenshots
@@ -65,7 +68,7 @@ Costs are estimates: costs recorded in logs (Pi, Oh My Pi) are used as is; other
 
 ## Install
 
-Requires Paseo `>= 0.12.0` with plugins enabled under Settings → Plugins.
+Requires Paseo `>= 0.13.0` with plugins enabled under Settings → Plugins.
 
 ```bash
 # Pin a release (recommended; enables in-app updates)

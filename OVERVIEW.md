@@ -2,13 +2,17 @@ Usage stats shows how many tokens your Paseo agents used and what they cost in U
 
 ## What you get
 
-- A screen in the sidebar footer, also reachable from the command center, with totals for cost, tokens (input, output, cache read, cache write), requests and active agents.
+- A screen in the sidebar footer, also reachable from the command center (on desktop and web, pressing the sidebar entry again closes it), with totals for cost, tokens (input, output, cache read, cache write), requests and active agents.
 - Breakdown tables by provider, model and project. Sort by cost or tokens, and tap a row to filter everything by it.
 - A time range picker: last 24 hours (the default), 7, 30 or 90 days, all time, or a custom range.
+- Usage over time: hourly, daily or weekly bars of cost or tokens, stacked by provider or model and bucketed in your local time zone. Tap a bar to see its breakdown and narrow the screen to that period.
 - Searchable multi-select filters for providers, models and projects. Filters combine and apply to every number on the screen.
 - A multi-agent section with collaboration trees, child agents, average and maximum fan-out, depth, the share of cost spent in child agents, provider pairs such as Claude to Codex, and the most expensive collaborations with their member agents. Provider-native subagents, such as Codex subthreads and Claude Code subagents, are counted separately and attributed to the Paseo agent that spawned them.
 - Collaboration by model: each model's spend as an orchestrator, a child agent and a provider subagent, the share of its spend that happens in collaboration, what orchestrators mainly using it delegated (children, their spend and fan-out), and parent to child pairs by model or by provider. Tap a model to filter the screen by it.
-- Topology graphs: a layered graph of which agents launched which, grouped per level by model or by provider. Line thickness shows the number of children, dashed nodes are provider subagents, and tapping a node highlights and lists its links. Each collaboration in the ranking can also switch from a list to an agent-level topology, where tapping a node opens that agent.
+- Topology graphs: a layered graph of which agents launched which, grouped per level by model or by provider. Line thickness shows the number of children, dashed nodes are provider subagents, and only the costliest path uses the accent colour. Pointing at a node traces its links; tapping it shows its share of collaboration spend, how many nodes it reaches upstream and downstream, and a link to filter the screen by it. You can also highlight the costliest path or provider subagents, and a level with many nodes folds its smallest into "Other". Each collaboration in the ranking can also switch from a list to an agent-level topology, where tapping a node opens that agent.
+
+- Export: copy a Markdown report, a CSV of every breakdown row, the topology as a Mermaid flowchart, or SeeCode specs of the topology and the spend trend. An agent with the SeeCode skill renders those specs as animated, explorable diagrams. Exports are built on the device and copied to the clipboard; nothing is uploaded.
+- English and Simplified Chinese, following the language chosen in Paseo on desktop, web and mobile. Other languages show English.
 
 ## How it works
 

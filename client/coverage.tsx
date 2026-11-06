@@ -2,6 +2,7 @@ import type { PluginTheme } from "@getpaseo/plugin";
 import { useMemo } from "react";
 import { Text, View } from "react-native";
 import type { Coverage } from "../shared/stats";
+import { localizeError } from "./errors";
 import { dateTime } from "./format";
 import type { Language, Translate } from "./i18n";
 import { cardStyle, sectionTitleStyle } from "./ui";
@@ -57,14 +58,18 @@ export function CoverageNote({
       <Text style={styles.title}>{t("coverage.title")}</Text>
       {coverage.syncError ? (
         <Text style={styles.warning}>
-          {t("coverage.syncError", { error: coverage.syncError })}
+          {t("coverage.syncError", {
+            error: localizeError(coverage.syncError, t),
+          })}
         </Text>
       ) : null}
       <Text style={styles.line}>{t("coverage.estimate")}</Text>
       <Text style={styles.line}>
         {pricingLine}
         {pricing.error
-          ? t("coverage.pricingError", { error: pricing.error })
+          ? t("coverage.pricingError", {
+              error: localizeError(pricing.error, t),
+            })
           : ""}
       </Text>
       {coverage.agents > 0 ? (

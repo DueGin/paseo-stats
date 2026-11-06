@@ -3,9 +3,10 @@ import type {
   PluginSidebarItemProps,
 } from "@getpaseo/plugin/client";
 import { SidebarRow } from "@getpaseo/plugin/client/ui";
-import { detectLanguage, translate } from "./client/i18n";
+import { messages } from "./client/i18n";
 import { StatsSettingsScreen } from "./client/settings-screen";
 import { StatsScreen } from "./client/stats-screen";
+import { leaveScreen, markOpenedInApp } from "./client/web";
 
 const ICON = "ChartColumn";
 
@@ -13,18 +14,23 @@ function StatsSidebarItem({
   currentScreen,
   openScreen,
 }: PluginSidebarItemProps) {
+  const active = currentScreen?.screenId === "stats";
   return (
     <SidebarRow
       icon={ICON}
-      active={currentScreen?.screenId === "stats"}
-      onPress={() => openScreen({ screenId: "stats" })}
+      active={active}
+      onPress={() => {
+        // A second press closes the screen where the app allows it.
+        if (active && leaveScreen()) return;
+        markOpenedInApp();
+        openScreen({ screenId: "stats" });
+      }}
     />
   );
 }
 
 export default function contribute(client: PluginClientContext) {
-  const language = detectLanguage();
-  const title = translate(language, "app.title");
+  const title = messages.message("app.title");
   const removers = [
     client.addScreen({ id: "stats", title, Component: StatsScreen }),
     client.addSidebarFooterItem({
@@ -34,17 +40,18 @@ export default function contribute(client: PluginClientContext) {
     }),
     client.addCommandCenterItem({
       id: "open-stats",
-      title: translate(language, "app.open"),
+      title: messages.message("app.open"),
       icon: ICON,
       keywords: ["usage", "tokens", "cost", "stats", "用量", "费用", "统计"],
       context: "global",
       onSelect({ openScreen }) {
+        markOpenedInApp();
         openScreen({ screenId: "stats" });
       },
     }),
     client.addSettingsScreen({
       id: "stats",
-      title: translate(language, "app.settings"),
+      title: messages.message("app.settings"),
       icon: ICON,
       Component: StatsSettingsScreen,
     }),

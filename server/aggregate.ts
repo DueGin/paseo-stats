@@ -15,6 +15,7 @@ import {
   type TreeMember,
 } from "../shared/stats.ts";
 import { eventCost, type PriceBook } from "./pricing.ts";
+import { buildTimeline, type TimelineEntry } from "./timeline.ts";
 import { eventTokens, type AgentMeta, type UsageEvent } from "./types.ts";
 
 const TOP_TREES = 20;
@@ -224,6 +225,7 @@ export function aggregate(input: AggregateInput): AggregateOutput {
   const activity = new Map<string, AgentActivity>();
   const native = { tokens: 0, cost: 0, sessions: new Set<string>() };
   const unpriced = new Set<string>();
+  const timeline: TimelineEntry[] = [];
 
   for (const event of events) {
     const agent = agents[event.agentId];
@@ -249,6 +251,13 @@ export function aggregate(input: AggregateInput): AggregateOutput {
     if (cost === null) unpriced.add(event.model);
 
     addEvent(totals, event, cost);
+    timeline.push({
+      ts: event.ts,
+      provider: agent.provider,
+      model: event.model,
+      tokens,
+      cost,
+    });
     const providerName = providerLabel(agent.provider);
     bump(byProvider, agent.provider, providerName, event, cost);
     bump(byModel, event.model, event.model, event, cost, providerName);
@@ -313,6 +322,7 @@ export function aggregate(input: AggregateInput): AggregateOutput {
       models: options(modelOptions),
       projects: options(projectOptions),
     },
+    timeline: buildTimeline(timeline, query, providerLabel),
     collaboration: collaborate(
       agents,
       participants,
