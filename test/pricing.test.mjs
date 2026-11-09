@@ -72,6 +72,24 @@ test("PriceBook prefers exact keys, then the model's own vendor", () => {
   assert.equal(book.resolve("codex-auto-review"), null);
 });
 
+test("PriceBook maps Kimi Code model aliases to Moonshot prices", () => {
+  const book = new PriceBook(
+    trimLiteLLM({
+      "moonshot/kimi-k3.1-pro": {
+        input_cost_per_token: 2e-6,
+        output_cost_per_token: 1e-5,
+        cache_read_input_token_cost: 2e-7,
+        cache_creation_input_token_cost: 2e-6,
+      },
+    }),
+  );
+  assert.ok(modelCandidates("kimi-code/k3.1-pro").includes("kimi-k3.1-pro"));
+  const resolved = book.resolve("kimi-code/k3.1-pro");
+  assert.equal(resolved.source, "moonshot/kimi-k3.1-pro");
+  assert.equal(resolved.price.cacheRead, 2e-7);
+  assert.equal(book.resolve("kimi-code/kimi-for-coding"), null);
+});
+
 test("custom prices win and are given per million tokens", () => {
   const book = new PriceBook(trimLiteLLM(raw), [
     {
