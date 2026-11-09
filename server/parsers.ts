@@ -178,9 +178,41 @@ export const piParser: LogParser = {
   },
 };
 
+export const kimiParser: LogParser = {
+  needles: ['"usage.record"'],
+  parse(line, state) {
+    const entry = parseJson(line);
+    if (!entry || entry.type !== "usage.record") return null;
+    const usage = record(entry.usage);
+    const model = entry.model;
+    if (!usage || typeof model !== "string") return null;
+    const input = count(usage.inputOther);
+    const output = count(usage.output);
+    const cacheRead = count(usage.inputCacheRead);
+    const cacheWrite = count(usage.inputCacheCreation);
+    if (input + output + cacheRead + cacheWrite === 0) return null;
+    const ts = timestamp(entry.time);
+    if (ts === null) return null;
+    return {
+      key: `kimi:${state.session}:${ts}`,
+      ts,
+      model,
+      input,
+      output,
+      cacheRead,
+      cacheWrite,
+      cacheWrite1h: 0,
+      reportedCost: null,
+      session: state.session,
+      native: state.native,
+    };
+  },
+};
+
 export const PARSERS: Record<LogProvider, LogParser> = {
   claude: claudeParser,
   codex: codexParser,
   pi: piParser,
   omp: piParser,
+  kimi: kimiParser,
 };

@@ -22,6 +22,7 @@ Paseo does not keep a usage history, so the plugin reads the session logs that p
 - Codex: `~/.codex/sessions` and `archived_sessions` (or `CODEX_HOME`)
 - Pi: `~/.pi/agent/sessions` (or `PI_CODING_AGENT_DIR`)
 - Oh My Pi: `~/.omp/agent/sessions`
+- Kimi Code CLI: `~/.kimi-code/sessions` (or `KIMI_CODE_HOME`)
 
 Usage is copied into a ledger under `~/.paseo/plugin-data/paseo-stats`, so totals survive when providers clean up old logs. The plugin syncs after agent turns end, every 10 minutes while the daemon runs, and when you open or refresh the screen. Usage from before the plugin was installed is only available while those logs still exist.
 
@@ -54,4 +55,4 @@ When a newer GitHub release exists, the stats screen shows it with a link to the
 
 ## Limits
 
-Other providers, such as Grok or Kimi Code CLI, are listed as unsupported in the data notes and are not counted. Token counts reflect what each provider logs; subscription plans are shown at API list prices.
+Other providers, such as Grok, are listed as unsupported in the data notes and are not counted. Token counts reflect what each provider logs; subscription plans are shown at API list prices.

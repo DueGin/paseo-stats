@@ -55,12 +55,13 @@
 
 Paseo 不保存用量历史，插件读取守护进程所在机器上各客户端的会话日志，并按会话关联到 Paseo agent：
 
-| 客户端   | 日志目录                                                    |
-| -------- | ----------------------------------------------------------- |
-| Claude   | `~/.claude/projects`（或 `CLAUDE_CONFIG_DIR`）              |
-| Codex    | `~/.codex/sessions`、`archived_sessions`（或 `CODEX_HOME`） |
-| Pi       | `~/.pi/agent/sessions`（或 `PI_CODING_AGENT_DIR`）          |
-| Oh My Pi | `~/.omp/agent/sessions`                                     |
+| 客户端        | 日志目录                                                    |
+| ------------- | ----------------------------------------------------------- |
+| Claude        | `~/.claude/projects`（或 `CLAUDE_CONFIG_DIR`）              |
+| Codex         | `~/.codex/sessions`、`archived_sessions`（或 `CODEX_HOME`） |
+| Pi            | `~/.pi/agent/sessions`（或 `PI_CODING_AGENT_DIR`）          |
+| Oh My Pi      | `~/.omp/agent/sessions`                                     |
+| Kimi Code CLI | `~/.kimi-code/sessions`（或 `KIMI_CODE_HOME`）              |
 
 用量会写入插件账本 `~/.paseo/plugin-data/paseo-stats`，客户端清理日志后数据仍保留。每轮对话结束、每 10 分钟以及打开页面时同步。
 

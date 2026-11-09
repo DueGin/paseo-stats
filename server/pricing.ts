@@ -78,6 +78,9 @@ export function modelCandidates(model: string): string[] {
   add(base);
   const last = base.slice(base.lastIndexOf("/") + 1);
   add(last);
+  if (base.startsWith("kimi-code/") && !last.startsWith("kimi")) {
+    add(`kimi-${last}`);
+  }
   add(last.replace(/^(oai|openai|anthropic|azure|aws|gcp)[-_]/, ""));
   for (const name of [...names]) {
     add(name.replace(/-(\d{8}|\d{4}-\d{2}-\d{2})$/, ""));
