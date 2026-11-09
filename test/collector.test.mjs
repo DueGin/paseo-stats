@@ -109,6 +109,7 @@ function setup() {
     ],
     pi: [join(root, "pi/sessions")],
     omp: [join(root, "omp/sessions")],
+    kimi: [join(root, "kimi/sessions")],
   };
   return { root, roots, piFile, dataDir: join(root, "data") };
 }

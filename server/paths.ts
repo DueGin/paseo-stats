@@ -2,13 +2,14 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-export type LogProvider = "claude" | "codex" | "pi" | "omp";
+export type LogProvider = "claude" | "codex" | "pi" | "omp" | "kimi";
 
 export const SUPPORTED_PROVIDERS: readonly LogProvider[] = [
   "claude",
   "codex",
   "pi",
   "omp",
+  "kimi",
 ];
 
 export type LogRoots = Record<LogProvider, string[]>;
@@ -24,11 +25,13 @@ export function resolveLogRoots(
     : [join(home, ".claude"), join(home, ".config", "claude")];
   const codexHome = env.CODEX_HOME || join(home, ".codex");
   const piDir = env.PI_CODING_AGENT_DIR || join(home, ".pi", "agent");
+  const kimiHome = env.KIMI_CODE_HOME || join(home, ".kimi-code");
   return {
     claude: claudeDirs.filter(Boolean).map((dir) => join(dir, "projects")),
     codex: [join(codexHome, "sessions"), join(codexHome, "archived_sessions")],
     pi: [join(piDir, "sessions")],
     omp: [join(home, ".omp", "agent", "sessions")],
+    kimi: [join(kimiHome, "sessions")],
   };
 }
 

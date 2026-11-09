@@ -172,21 +172,59 @@ export async function indexCodex(
   return sessions;
 }
 
+// <root>/<project>/<session>/agents/<agent>/wire.jsonl. Every native agent in
+// the session belongs to the Paseo agent that owns the main session.
+export async function indexKimi(
+  roots: readonly string[],
+): Promise<Map<string, SessionFile[]>> {
+  const sessions = new Map<string, SessionFile[]>();
+  for (const root of roots) {
+    for (const project of await list(root)) {
+      if (!project.isDirectory()) continue;
+      const projectDir = join(root, project.name);
+      for (const dir of await list(projectDir)) {
+        if (!dir.isDirectory()) continue;
+        const agentsDir = join(projectDir, dir.name, "agents");
+        for (const agent of await list(agentsDir)) {
+          if (!agent.isDirectory()) continue;
+          const agentDir = join(agentsDir, agent.name);
+          if (
+            !(await list(agentDir)).some(
+              (entry) => entry.isFile() && entry.name === "wire.jsonl",
+            )
+          ) {
+            continue;
+          }
+          const native = agent.name !== "main";
+          push(sessions, dir.name, {
+            path: join(agentDir, "wire.jsonl"),
+            session: native ? `${dir.name}/${agent.name}` : dir.name,
+            native,
+          });
+        }
+      }
+    }
+  }
+  return sessions;
+}
+
 export async function buildSessionIndex(
   roots: LogRoots,
   codexMetaCache: Record<string, CodexThreadMeta>,
 ): Promise<SessionIndex> {
-  const [claude, codex, pi, omp] = await Promise.all([
+  const [claude, codex, pi, omp, kimi] = await Promise.all([
     indexClaude(roots.claude),
     indexCodex(roots.codex, codexMetaCache),
     indexPi(roots.pi),
     indexPi(roots.omp),
+    indexKimi(roots.kimi),
   ]);
   const byProvider: Record<LogProvider, Map<string, SessionFile[]>> = {
     claude,
     codex,
     pi,
     omp,
+    kimi,
   };
   return {
     find: (provider, sessionId) => byProvider[provider].get(sessionId) ?? [],

@@ -22,6 +22,7 @@ Paseo 不保存用量历史，插件读取客户端在守护进程所在机器�
 - Codex：`~/.codex/sessions` 与 `archived_sessions`（或 `CODEX_HOME`）
 - Pi：`~/.pi/agent/sessions`（或 `PI_CODING_AGENT_DIR`）
 - Oh My Pi：`~/.omp/agent/sessions`
+- Kimi Code CLI：`~/.kimi-code/sessions`（或 `KIMI_CODE_HOME`）
 
 用量会写入 `~/.paseo/plugin-data/paseo-stats` 下的账本，因此客户端清理旧日志后总量仍然保留。插件在每轮 agent 结束后、守护进程运行期间每 10 分钟，以及打开或刷新页面时同步。插件安装之前产生的用量，只有日志仍存在时才能读到。
 
@@ -54,4 +55,4 @@ Paseo 不保存用量历史，插件读取客户端在守护进程所在机器�
 
 ## 限制
 
-其他客户端（如 Grok、Kimi Code CLI）会在数据说明中标记为暂不支持，不计入统计。token 数取决于各客户端日志的记录方式；订阅套餐按 API 标价展示。
+其他客户端（如 Grok）会在数据说明中标记为暂不支持，不计入统计。token 数取决于各客户端日志的记录方式；订阅套餐按 API 标价展示。

@@ -55,12 +55,13 @@ Expand a collaboration in the ranking and switch to Topology; tap a node to open
 
 Paseo keeps no usage history, so the plugin reads provider session logs on the daemon machine and links each session to its Paseo agent:
 
-| Provider | Logs                                                       |
-| -------- | ---------------------------------------------------------- |
-| Claude   | `~/.claude/projects` (or `CLAUDE_CONFIG_DIR`)              |
-| Codex    | `~/.codex/sessions`, `archived_sessions` (or `CODEX_HOME`) |
-| Pi       | `~/.pi/agent/sessions` (or `PI_CODING_AGENT_DIR`)          |
-| Oh My Pi | `~/.omp/agent/sessions`                                    |
+| Provider      | Logs                                                       |
+| ------------- | ---------------------------------------------------------- |
+| Claude        | `~/.claude/projects` (or `CLAUDE_CONFIG_DIR`)              |
+| Codex         | `~/.codex/sessions`, `archived_sessions` (or `CODEX_HOME`) |
+| Pi            | `~/.pi/agent/sessions` (or `PI_CODING_AGENT_DIR`)          |
+| Oh My Pi      | `~/.omp/agent/sessions`                                    |
+| Kimi Code CLI | `~/.kimi-code/sessions` (or `KIMI_CODE_HOME`)              |
 
 Usage is copied into a ledger at `~/.paseo/plugin-data/paseo-stats`, so it survives log cleanup. Syncs run after each agent turn, every 10 minutes, and when the screen opens.
 
